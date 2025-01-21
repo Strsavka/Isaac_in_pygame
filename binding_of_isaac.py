@@ -10,21 +10,31 @@ class Item(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(self.image, (50, 50))
         self.rect = self.image.get_rect()
         self.rect.center = pos
+        self.speed = 0
+        self.mask = pygame.mask.from_surface(self.image)
+        self.lying = True
 
     def update(self):
-        if not pygame.sprite.collide_mask(self, player):
+        if pygame.sprite.collide_mask(self, self.player_getting):
             self.add_to_inventory(player)
-            if self.name == 'bomb':
-                player.inventory_bombs += 1
+        if not self.lying:
+            item_sprites.remove(self)
+            return
 
     def add_to_inventory(self, player_getting):
-        pass
-
-    def use(self, player_using):
-        self.apply_effect(player_using)
-
-    def apply_effect(self, player_using):
-        pass
+        if self.name == 'bomb':
+            player_getting.inventory_bombs += 1
+        elif self.name == 'Penny':
+            player_getting.inventory_money += 1
+        elif self.name == 'Red_Heart':
+            if player_getting.health + 1 <= player_getting.max_health:
+                player_getting.health += 1
+                if player_getting.health + 1 <= player_getting.max_health:
+                    player_getting.health += 1
+        elif self.name == 'Half_Red_Heart':
+            if player_getting.health + 1 <= player_getting.max_health:
+                player_getting.health += 1
+        self.lying = False
 
 
 class Bomb(pygame.sprite.Sprite):
@@ -71,8 +81,12 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(topleft=(x, y))
         self.speed = 4
         self.mask = pygame.mask.from_surface(self.image)
-        self.inventory_bombs = 10
+        self.inventory_bombs = 10  # кол-во бомб
+        self.inventory_money = 0  # кол-во монет
         self.player_tear_kd = 0
+        self.health = 6  # кол-во хп
+        self.max_health = 6  # макс кол-во хп
+        self.soul_health = 0  # сердца душ(если хочешь реализовать, то надо переписывать логику отображения сердец)
 
     def update(self):
         keys = pygame.key.get_pressed()
@@ -94,6 +108,12 @@ class Player(pygame.sprite.Sprite):
             self.rect.top = 70
         elif self.rect.bottom > 570:
             self.rect.bottom = 570
+
+        if player.health < 1:  # проверка на закончившиеся хп
+            player.dead()
+
+    def dead(self):  # прописать механику смерти надо
+        pass
 
 
 class Tear(pygame.sprite.Sprite):
@@ -153,6 +173,15 @@ if __name__ == '__main__':
     bomb_icon = pygame.image.load('bomb.png')
     bomb_icon = pygame.transform.scale(bomb_icon, (50, 50))
     bomb_counter_font = pygame.font.SysFont("Times New Roman", 50)
+    money_counter_font = pygame.font.SysFont("Times New Roman", 50)
+    money_icon = pygame.image.load('Penny.png')
+    money_icon = pygame.transform.scale(money_icon, (50, 50))
+    health_empty_icon = pygame.image.load('heart_empty.png')
+    health_empty_icon = pygame.transform.scale(health_empty_icon, (50, 50))
+    health_half_icon = pygame.image.load('heart_half.png')
+    health_half_icon = pygame.transform.scale(health_half_icon, (50, 50))
+    health_full_icon = pygame.image.load('heart_full.png')
+    health_full_icon = pygame.transform.scale(health_full_icon, (50, 50))
     running = True
     while running:
         for event in pygame.event.get():
@@ -174,8 +203,10 @@ if __name__ == '__main__':
                 if pygame.key.get_pressed()[pygame.K_e] and player.inventory_bombs > 0:
                     bomb_sprites.add(Bomb(player.rect.center[0], player.rect.center[1]))
                     player.inventory_bombs -= 1
-                if pygame.key.get_pressed()[pygame.K_p]:
+                if pygame.key.get_pressed()[pygame.K_p]:  # чит-клавиша(бета-тест)
                     item_sprites.add(Item('bomb', (300, 300), player))
+                    item_sprites.add(Item('Penny', (600, 300), player))
+                    player.health -= 1
 
         # Обновление всех спрайтов
         all_sprites.update()
@@ -187,11 +218,32 @@ if __name__ == '__main__':
         screen.fill((0, 0, 0))
         screen.blit(background, (0, 0))
         bomb_counter = bomb_counter_font.render(str(player.inventory_bombs), True, 'WHITE')
-        screen.blit(bomb_counter, (50, 0))
+        screen.blit(bomb_counter, (50, 50))
+        money_counter = money_counter_font.render(str(player.inventory_money), True, 'WHITE')
+        screen.blit(money_counter, (50, 100))
         all_sprites.draw(screen)
         tear_sprites.draw(screen)
         bomb_sprites.draw(screen)
-        screen.blit(bomb_icon, (0, 0))
+        item_sprites.draw(screen)
+        screen.blit(bomb_icon, (0, 50))
+        screen.blit(money_icon, (0, 100))
+        player_counting_health = player.health  # логика отображения хп
+        player_counting_health_place = 0
+        while player_counting_health > 0:
+            if player_counting_health - 2 >= 0:
+                player_counting_health -= 2
+                screen.blit(health_full_icon, (player_counting_health_place, 0))
+                player_counting_health_place += 50
+            else:
+                player_counting_health -= 1
+                screen.blit(health_half_icon, (player_counting_health_place, 0))
+                player_counting_health_place += 50
+        player_counting_health_2 = player.max_health - player.health
+        while player_counting_health_2 > 1:
+            if player_counting_health_2 - 2 >= 0:
+                player_counting_health_2 -= 2
+                screen.blit(health_empty_icon, (player_counting_health_place, 0))
+                player_counting_health_place += 50
         pygame.display.flip()
 
         if player.player_tear_kd > 0:
