@@ -1,5 +1,37 @@
 import pygame as pygame
 
+# Загрузка изображений сердца
+heart_full = pygame.image.load("heart_full.png")
+heart_half = pygame.image.load("heart_half.png")
+heart_empty = pygame.image.load("heart_empty.png")
+heart_full = pygame.transform.scale(heart_full, (50, 50))
+heart_half = pygame.transform.scale(heart_half, (50, 50))
+heart_empty = pygame.transform.scale(heart_empty, (50, 50))
+
+# Размеры одного сегмента сердца
+HEART_WIDTH = 50
+HEART_HEIGHT = 50
+
+
+def draw_health_bar(x, y, health, max_health):
+    # Рассчитываем количество полных сердец
+    full_hearts = int(health // 2)
+    empty_hearts = (max_health - health) // 2
+    e = full_hearts
+
+    # Отображаем полные сердца
+    for i in range(full_hearts):
+        screen.blit(heart_full, (x + i * HEART_WIDTH, y))
+
+    # Остаток от деления на 2 определяет состояние следующего сердца
+    remainder = health % 2
+
+    if remainder == 1:
+        screen.blit(heart_half, (x + full_hearts * HEART_WIDTH, y))
+        e += 1
+    for i in range(empty_hearts):
+        screen.blit(heart_empty, (x + (i + e) * HEART_WIDTH, y))
+
 
 class Item(pygame.sprite.Sprite):
     def __init__(self, name, pos, player_getting):
@@ -70,6 +102,9 @@ class Bomb(pygame.sprite.Sprite):
         self.image = pygame.image.load('boom.png')
         self.rect = self.image.get_rect()
         self.rect.center = old_center
+        if -100 < player.rect.center[0] - self.rect.center[0] < 100 and -100 < player.rect.center[1] - self.rect.center[
+            1] < 100:
+            player.getting_damage(1)
         self.alive = False
 
 
@@ -87,33 +122,40 @@ class Player(pygame.sprite.Sprite):
         self.health = 6  # кол-во хп
         self.max_health = 6  # макс кол-во хп
         self.soul_health = 0  # сердца душ(если хочешь реализовать, то надо переписывать логику отображения сердец)
+        self.is_updating = True
 
     def update(self):
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_a]:
-            self.rect.x -= self.speed
-        if keys[pygame.K_d]:
-            self.rect.x += self.speed
-        if keys[pygame.K_w]:
-            self.rect.y -= self.speed
-        if keys[pygame.K_s]:
-            self.rect.y += self.speed
+        if self.is_updating:
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_a]:
+                self.rect.x -= self.speed
+            if keys[pygame.K_d]:
+                self.rect.x += self.speed
+            if keys[pygame.K_w]:
+                self.rect.y -= self.speed
+            if keys[pygame.K_s]:
+                self.rect.y += self.speed
 
-        # Ограничение движения по экрану
-        if self.rect.left < 100:
-            self.rect.left = 100
-        elif self.rect.right > 1100:
-            self.rect.right = 1100
-        if self.rect.top < 70:
-            self.rect.top = 70
-        elif self.rect.bottom > 570:
-            self.rect.bottom = 570
+            # Ограничение движения по экрану
+            if self.rect.left < 100:
+                self.rect.left = 100
+            elif self.rect.right > 1100:
+                self.rect.right = 1100
+            if self.rect.top < 70:
+                self.rect.top = 70
+            elif self.rect.bottom > 570:
+                self.rect.bottom = 570
 
-        if player.health < 1:  # проверка на закончившиеся хп
-            player.dead()
+            if player.health < 1:  # проверка на закончившиеся хп
+                player.dead()
 
-    def dead(self):  # прописать механику смерти надо
-        pass
+    def dead(self):
+        self.image = pygame.image.load('dead.png')
+        self.image = pygame.transform.scale(self.image, (100, 100))
+        self.is_updating = False
+
+    def getting_damage(self, dmg):
+        self.health -= dmg
 
 
 class Tear(pygame.sprite.Sprite):
@@ -188,16 +230,16 @@ if __name__ == '__main__':
             if event.type == pygame.QUIT:
                 running = False
             if event.type == pygame.KEYDOWN:
-                if pygame.key.get_pressed()[pygame.K_LEFT] and player.player_tear_kd == 0:
+                if pygame.key.get_pressed()[pygame.K_LEFT] and player.player_tear_kd == 0 and player.is_updating:
                     tear_sprites.add(Tear('left'))
                     player.player_tear_kd = 120
-                if pygame.key.get_pressed()[pygame.K_RIGHT] and player.player_tear_kd == 0:
+                if pygame.key.get_pressed()[pygame.K_RIGHT] and player.player_tear_kd == 0 and player.is_updating:
                     tear_sprites.add(Tear('right'))
                     player.player_tear_kd = 120
-                if pygame.key.get_pressed()[pygame.K_UP] and player.player_tear_kd == 0:
+                if pygame.key.get_pressed()[pygame.K_UP] and player.player_tear_kd == 0 and player.is_updating:
                     tear_sprites.add(Tear('up'))
                     player.player_tear_kd = 120
-                if pygame.key.get_pressed()[pygame.K_DOWN] and player.player_tear_kd == 0:
+                if pygame.key.get_pressed()[pygame.K_DOWN] and player.player_tear_kd == 0 and player.is_updating:
                     tear_sprites.add(Tear('down'))
                     player.player_tear_kd = 120
                 if pygame.key.get_pressed()[pygame.K_e] and player.inventory_bombs > 0:
@@ -206,6 +248,7 @@ if __name__ == '__main__':
                 if pygame.key.get_pressed()[pygame.K_p]:  # чит-клавиша(бета-тест)
                     item_sprites.add(Item('bomb', (300, 300), player))
                     item_sprites.add(Item('Penny', (600, 300), player))
+                    item_sprites.add(Item('Red_Heart', (700, 300), player))
                     player.health -= 1
 
         # Обновление всех спрайтов
@@ -227,23 +270,8 @@ if __name__ == '__main__':
         item_sprites.draw(screen)
         screen.blit(bomb_icon, (0, 50))
         screen.blit(money_icon, (0, 100))
-        player_counting_health = player.health  # логика отображения хп
-        player_counting_health_place = 0
-        while player_counting_health > 0:
-            if player_counting_health - 2 >= 0:
-                player_counting_health -= 2
-                screen.blit(health_full_icon, (player_counting_health_place, 0))
-                player_counting_health_place += 50
-            else:
-                player_counting_health -= 1
-                screen.blit(health_half_icon, (player_counting_health_place, 0))
-                player_counting_health_place += 50
-        player_counting_health_2 = player.max_health - player.health
-        while player_counting_health_2 > 1:
-            if player_counting_health_2 - 2 >= 0:
-                player_counting_health_2 -= 2
-                screen.blit(health_empty_icon, (player_counting_health_place, 0))
-                player_counting_health_place += 50
+        draw_health_bar(0, 0, player.health, player.max_health)  # логика отображения хп2.0
+
         pygame.display.flip()
 
         if player.player_tear_kd > 0:
