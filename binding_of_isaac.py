@@ -1,6 +1,4 @@
 import pygame as pygame
-from random import choice
-
 
 # Загрузка изображений сердца
 heart_full = pygame.image.load("heart_full.png")
@@ -36,7 +34,7 @@ def draw_health_bar(x, y, health, max_health):
 
 
 class Item(pygame.sprite.Sprite):
-    def __init__(self, name, pos, player_getting):
+    def __init__(self, name, pos, player_getting, room=(0, 0)):
         super().__init__()
         self.player_getting = player_getting
         self.name = name
@@ -47,13 +45,26 @@ class Item(pygame.sprite.Sprite):
         self.speed = 0
         self.mask = pygame.mask.from_surface(self.image)
         self.lying = True
+        self.room = room
+        self.updating = True
 
     def update(self):
-        if pygame.sprite.collide_mask(self, self.player_getting):
-            self.add_to_inventory(player)
-        if not self.lying:
-            item_sprites.remove(self)
-            return
+        if self.updating:
+            if pygame.sprite.collide_mask(self, self.player_getting):
+                self.add_to_inventory(player)
+            if not self.lying:
+                item_sprites.remove(self)
+                return
+        if self.room != floor.isaac_in:
+            self.image = pygame.image.load('prosrachnost.avif')  # надо чинить
+            self.image = pygame.transform.scale(self.image, (50, 50))
+            self.updating = False
+        elif self.room == floor.isaac_in:
+            self.image = pygame.image.load(self.name + '.png')
+            self.image = pygame.transform.scale(self.image, (50, 50))
+            self.rect = self.image.get_rect()
+            self.mask = pygame.mask.from_surface(self.image)
+            self.updating = False
 
     def add_to_inventory(self, player_getting):
         if self.name == 'bomb':
@@ -111,8 +122,12 @@ class Bomb(pygame.sprite.Sprite):
 
 
 class Room:  # class of rooms
-    def __init__(self, type, coords):
+    def __init__(self, type, coords, items=None, items_winning=None):
         self.type_of_room = type  # тип комнаты для будущей сокровищницы, магазина, комнаты босса...
+        self.items_in_room = items
+        self.items_for_clear = items_winning
+        self.cleared = False  # зачищена ли комната
+
         self.y_of_room, self.x_of_room = coords
         self.up_door, self.bottom_door, self.right_door, self.left_door = False, False, False, False
         # уникальное для каждой комнаты наличие той или иной двери
@@ -124,6 +139,11 @@ class Room:  # class of rooms
             self.right_door = True
         if self.x_of_room > 0:
             self.left_door = True
+
+    def update(self):
+        self.items_in_room.update()
+        if self.cleared:
+            self.items_for_clear.update()
 
 
 class Floor:  # класс обработка всех комнат вместе
@@ -192,25 +212,26 @@ class Player(pygame.sprite.Sprite):
 
     def update(self):
         # ходьба
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_a]:
-            self.rect.x -= self.speed
-        if keys[pygame.K_d]:
-            self.rect.x += self.speed
-        if keys[pygame.K_w]:
-            self.rect.y -= self.speed
-        if keys[pygame.K_s]:
-            self.rect.y += self.speed
+        if self.is_updating:
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_a]:
+                self.rect.x -= self.speed
+            if keys[pygame.K_d]:
+                self.rect.x += self.speed
+            if keys[pygame.K_w]:
+                self.rect.y -= self.speed
+            if keys[pygame.K_s]:
+                self.rect.y += self.speed
 
-        # ограничение по комнате
-        if self.rect.centerx < 50:
-            self.rect.centerx = 50
-        if self.rect.centerx > 1150:
-            self.rect.centerx = 1150
-        if self.rect.centery < 50:
-            self.rect.centery = 50
-        if self.rect.centery > 605:
-            self.rect.centery = 605
+            # ограничение по комнате
+            if self.rect.centerx < 50:
+                self.rect.centerx = 50
+            if self.rect.centerx > 1150:
+                self.rect.centerx = 1150
+            if self.rect.centery < 50:
+                self.rect.centery = 50
+            if self.rect.centery > 605:
+                self.rect.centery = 605
 
         if player.health < 1:  # проверка на закончившиеся хп
             player.dead()
@@ -308,30 +329,30 @@ if __name__ == '__main__':
                 running = False
 
             # стрельба
-            if pygame.key.get_pressed()[pygame.K_LEFT] and player_tear_kd == 0:
+            if pygame.key.get_pressed()[pygame.K_LEFT] and player_tear_kd == 0 and player.is_updating:
                 tear_sprites.add(Tear('left'))
                 player_tear_kd = 60
-            if pygame.key.get_pressed()[pygame.K_RIGHT] and player_tear_kd == 0:
+            if pygame.key.get_pressed()[pygame.K_RIGHT] and player_tear_kd == 0 and player.is_updating:
                 tear_sprites.add(Tear('right'))
                 player_tear_kd = 60
-            if pygame.key.get_pressed()[pygame.K_UP] and player_tear_kd == 0:
+            if pygame.key.get_pressed()[pygame.K_UP] and player_tear_kd == 0 and player.is_updating:
                 tear_sprites.add(Tear('up'))
                 player_tear_kd = 60
-            if pygame.key.get_pressed()[pygame.K_DOWN] and player_tear_kd == 0:
+            if pygame.key.get_pressed()[pygame.K_DOWN] and player_tear_kd == 0 and player.is_updating:
                 tear_sprites.add(Tear('down'))
                 player_tear_kd = 60
 
             # бомбочка
-            if pygame.key.get_pressed()[pygame.K_e] and player.inventory_bombs > 0:
+            if pygame.key.get_pressed()[pygame.K_e] and player.inventory_bombs > 0 and player.is_updating:
                 bomb_sprites.add(Bomb(player.rect.center[0], player.rect.center[1]))
                 player.inventory_bombs -= 1
 
             # чит-клавиша
             if pygame.key.get_pressed()[pygame.K_p]:  # чит-клавиша(бета-тест)
-                item_sprites.add(Item('bomb', (300, 300), player))
-                item_sprites.add(Item('Penny', (600, 300), player))
-                item_sprites.add(Item('Red_Heart', (700, 300), player))
-                player.health -= 1
+                item_sprites.add(Item('bomb', (300, 300), player, room=(2, 2)))
+                item_sprites.add(Item('Penny', (600, 300), player, room=(2, 2)))
+                item_sprites.add(Item('Red_Heart', (700, 300), player, room=(2, 2)))
+                player.getting_damage(1)
 
             # проверка перехода в другую комнату
             if (floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].left_door is True and
@@ -394,7 +415,7 @@ if __name__ == '__main__':
         draw_health_bar(0, 0, player.health, player.max_health)
         pygame.display.flip()
 
-        # кд стрельбы игрока
+        # кд стрельбы игрока(оно вообще работает?)
         if player_tear_kd > 0:
             player_tear_kd -= 10
         clock.tick(60)
