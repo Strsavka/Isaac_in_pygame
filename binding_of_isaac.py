@@ -42,6 +42,7 @@ class Item(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(self.image, (50, 50))
         self.rect = self.image.get_rect()
         self.rect.center = pos
+        self.pos = pos
         self.speed = 0
         self.mask = pygame.mask.from_surface(self.image)
         self.lying = True
@@ -56,15 +57,11 @@ class Item(pygame.sprite.Sprite):
                 item_sprites.remove(self)
                 return
         if self.room != floor.isaac_in:
-            self.image = pygame.image.load('prosrachnost.avif')  # надо чинить
-            self.image = pygame.transform.scale(self.image, (50, 50))
+            self.rect.center = (-1000000, -10000000)
             self.updating = False
         elif self.room == floor.isaac_in:
-            self.image = pygame.image.load(self.name + '.png')
-            self.image = pygame.transform.scale(self.image, (50, 50))
-            self.rect = self.image.get_rect()
-            self.mask = pygame.mask.from_surface(self.image)
-            self.updating = False
+            self.rect.center = self.pos
+            self.updating = True
 
     def add_to_inventory(self, player_getting):
         if self.name == 'bomb':
@@ -187,6 +184,19 @@ class Floor:  # класс обработка всех комнат вместе
         self.bottom_door.mask = pygame.mask.from_surface(self.bottom_door.image)
         door_sprites.add(self.bottom_door)
 
+        self.changing_rooms_true = False
+
+    def changing_rooms(self, direction):
+        # изображение изменения комнаты
+        background.rect.x += 100 * direction[0]
+        background.rect.y += 100 * direction[1]
+
+        changing_background.rect.x += 100 * direction[0]
+        changing_background.rect.y += 100 * direction[1]
+        if changing_background.rect.topleft == (0, 0):
+            floor.changing_rooms_true = False
+            background.rect = background.image.get_rect(topleft=(0, 0))
+
     def update(self):
         pass
 
@@ -245,6 +255,17 @@ class Player(pygame.sprite.Sprite):
         self.health -= dmg
 
 
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = pygame.image.load('monstro.png')
+        self.image = pygame.transform.scale(self.image, (100, 100))
+        self.rect = self.image.get_rect(topleft=(x, y))
+        self.speed = 3
+        self.mask = pygame.mask.from_surface(self.image)
+        self.health = 3
+
+
 class Tear(pygame.sprite.Sprite):
     def __init__(self, direction, *group):
         super().__init__(*group)
@@ -296,16 +317,25 @@ if __name__ == '__main__':
     # ОБЪЕКТ ЭТАЖ
     floor = Floor()
 
+    background = pygame.sprite.Sprite()
+    background.image = pygame.image.load('room.png')
+    background.image = pygame.transform.scale(background.image, (1200, 700))
+    background.rect = background.image.get_rect(topleft=(0, 0))
+    all_sprites.add(background)
+
+    changing_background = pygame.sprite.Sprite()
+    changing_background.image = pygame.image.load('room.png')
+    changing_background.image = pygame.transform.scale(changing_background.image, (1200, 700))
+    direction_of_changing = (1, 1)
+    changing_background.rect = changing_background.image.get_rect(topleft=(-1200, 0))
+    all_sprites.add(changing_background)
+
     # объект игрок
     player = Player(550, 300)
     all_sprites.add(player)
 
     # часики
     clock = pygame.time.Clock()
-
-    # png комнаты
-    background = pygame.image.load('room.png')
-    background = pygame.transform.scale(background, (1200, 700))
 
     bomb_icon = pygame.image.load('bomb.png')
     bomb_icon = pygame.transform.scale(bomb_icon, (50, 50))
@@ -351,46 +381,58 @@ if __name__ == '__main__':
             if pygame.key.get_pressed()[pygame.K_p]:  # чит-клавиша(бета-тест)
                 item_sprites.add(Item('bomb', (300, 300), player, room=(2, 2)))
                 item_sprites.add(Item('Penny', (600, 300), player, room=(2, 2)))
-                item_sprites.add(Item('Red_Heart', (700, 300), player, room=(2, 2)))
+                item_sprites.add(Item('Half_Red_Heart', (700, 300), player, room=(2, 2)))
                 player.getting_damage(1)
 
             # проверка перехода в другую комнату
-            if (floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].left_door is True and
-                    pygame.sprite.collide_mask(player, floor.left_door)):
-                floor.isaac_in = (floor.isaac_in[0], floor.isaac_in[1] - 1)
-                player.rect = player.image.get_rect(center=(1100, 350))
-                player.change_room = True
+        if (floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].left_door is True and
+                pygame.sprite.collide_mask(player, floor.left_door)):
+            floor.isaac_in = (floor.isaac_in[0], floor.isaac_in[1] - 1)
+            player.rect = player.image.get_rect(center=(1100, 350))
+            player.change_room = True
+            direction_of_changing = (1, 0)
+            changing_background.rect = changing_background.image.get_rect(topleft=(-1200, 0))
 
-            if (floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].right_door is True and
-                    pygame.sprite.collide_mask(player, floor.right_door)):
-                floor.isaac_in = (floor.isaac_in[0], floor.isaac_in[1] + 1)
-                player.rect = player.image.get_rect(center=(100, 350))
-                player.change_room = True
+        if (floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].right_door is True and
+                pygame.sprite.collide_mask(player, floor.right_door)):
+            floor.isaac_in = (floor.isaac_in[0], floor.isaac_in[1] + 1)
+            player.rect = player.image.get_rect(center=(100, 350))
+            player.change_room = True
+            direction_of_changing = (-1, 0)
+            changing_background.rect = changing_background.image.get_rect(topleft=(1200, 0))
 
-            if (floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].up_door is True and
-                    pygame.sprite.collide_mask(player, floor.up_door)):
-                floor.isaac_in = (floor.isaac_in[0] - 1, floor.isaac_in[1])
-                player.rect = player.image.get_rect(center=(600, 600))
-                player.change_room = True
+        if (floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].up_door is True and
+                pygame.sprite.collide_mask(player, floor.up_door)):
+            floor.isaac_in = (floor.isaac_in[0] - 1, floor.isaac_in[1])
+            player.rect = player.image.get_rect(center=(600, 600))
+            player.change_room = True
+            direction_of_changing = (0, 1)
+            changing_background.rect = changing_background.image.get_rect(topleft=(0, -700))
 
-            if (floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].bottom_door is True and
-                    pygame.sprite.collide_mask(player, floor.bottom_door)):
-                floor.isaac_in = (floor.isaac_in[0] + 1, floor.isaac_in[1])
-                player.rect = player.image.get_rect(center=(600, 100))
-                player.change_room = True
+        if (floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].bottom_door is True and
+                pygame.sprite.collide_mask(player, floor.bottom_door)):
+            floor.isaac_in = (floor.isaac_in[0] + 1, floor.isaac_in[1])
+            player.rect = player.image.get_rect(center=(600, 100))
+            player.change_room = True
+            direction_of_changing = (0, -1)
+            changing_background.rect = changing_background.image.get_rect(topleft=(0, 700))
 
             # переход в другую комнату
-            if player.change_room:
-                door_sprites.remove(floor.up_door, floor.left_door, floor.bottom_door, floor.right_door)
-                if floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].left_door:
-                    door_sprites.add(floor.left_door)
-                if floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].right_door:
-                    door_sprites.add(floor.right_door)
-                if floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].up_door:
-                    door_sprites.add(floor.up_door)
-                if floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].bottom_door:
-                    door_sprites.add(floor.bottom_door)
-                player.change_room = False
+        if player.change_room:
+            door_sprites.remove(floor.up_door, floor.left_door, floor.bottom_door, floor.right_door)
+            if floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].left_door:
+                door_sprites.add(floor.left_door)
+            if floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].right_door:
+                door_sprites.add(floor.right_door)
+            if floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].up_door:
+                door_sprites.add(floor.up_door)
+            if floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].bottom_door:
+                door_sprites.add(floor.bottom_door)
+            player.change_room = False
+            floor.changing_rooms_true = True
+
+        if floor.changing_rooms_true:
+            floor.changing_rooms(direction_of_changing)
 
         # апдейты всех спрайтов
         all_sprites.update()
@@ -400,12 +442,11 @@ if __name__ == '__main__':
 
         # отрисовка всех деталей
         screen.fill((0, 0, 0))
-        screen.blit(background, (0, 0))
+        all_sprites.draw(screen)
         bomb_counter = bomb_counter_font.render(str(player.inventory_bombs), True, 'WHITE')
         screen.blit(bomb_counter, (50, 50))
         money_counter = money_counter_font.render(str(player.inventory_money), True, 'WHITE')
         screen.blit(money_counter, (50, 100))
-        all_sprites.draw(screen)
         door_sprites.draw(screen)
         tear_sprites.draw(screen)
         bomb_sprites.draw(screen)
@@ -421,3 +462,4 @@ if __name__ == '__main__':
         clock.tick(60)
 
     pygame.quit()
+
