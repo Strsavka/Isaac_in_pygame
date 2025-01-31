@@ -370,33 +370,34 @@ if __name__ == '__main__':
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            if event.type == pygame.KEYDOWN:
 
-            # стрельба
-            if pygame.key.get_pressed()[pygame.K_LEFT] and player_tear_kd == 0 and player.is_updating:
-                tear_sprites.add(Tear('left'))
-                player_tear_kd = 60
-            if pygame.key.get_pressed()[pygame.K_RIGHT] and player_tear_kd == 0 and player.is_updating:
-                tear_sprites.add(Tear('right'))
-                player_tear_kd = 60
-            if pygame.key.get_pressed()[pygame.K_UP] and player_tear_kd == 0 and player.is_updating:
-                tear_sprites.add(Tear('up'))
-                player_tear_kd = 60
-            if pygame.key.get_pressed()[pygame.K_DOWN] and player_tear_kd == 0 and player.is_updating:
-                tear_sprites.add(Tear('down'))
-                player_tear_kd = 60
+                # стрельба
+                if pygame.key.get_pressed()[pygame.K_LEFT] and player_tear_kd == 0 and player.is_updating:
+                    tear_sprites.add(Tear('left'))
+                    player_tear_kd = 60
+                if pygame.key.get_pressed()[pygame.K_RIGHT] and player_tear_kd == 0 and player.is_updating:
+                    tear_sprites.add(Tear('right'))
+                    player_tear_kd = 60
+                if pygame.key.get_pressed()[pygame.K_UP] and player_tear_kd == 0 and player.is_updating:
+                    tear_sprites.add(Tear('up'))
+                    player_tear_kd = 60
+                if pygame.key.get_pressed()[pygame.K_DOWN] and player_tear_kd == 0 and player.is_updating:
+                    tear_sprites.add(Tear('down'))
+                    player_tear_kd = 60
 
-            # бомбочка
-            if pygame.key.get_pressed()[pygame.K_e] and player.inventory_bombs > 0 and player.is_updating:
-                bomb_sprites.add(Bomb(player.rect.center[0], player.rect.center[1]))
-                player.inventory_bombs -= 1
+                # бомбочка
+                if pygame.key.get_pressed()[pygame.K_e] and player.inventory_bombs > 0 and player.is_updating:
+                    bomb_sprites.add(Bomb(player.rect.center[0], player.rect.center[1]))
+                    player.inventory_bombs -= 1
 
-            # чит-клавиша
-            if pygame.key.get_pressed()[pygame.K_u]:  # чит-клавиша(бета-тест)
-                item_sprites.add(Item('bomb', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
-                item_sprites.add(Item('Penny', (600, 300), player, room=(2, 2)))
-                item_sprites.add(Item('Half_Red_Heart', (700, 300), player, room=(2, 2)))
-                print(123)
-                player.getting_damage(1)
+                # чит-клавиша
+                if event.key == pygame.K_p:  # чит-клавиша(бета-тест)
+                    item_sprites.add(Item('bomb', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
+                    item_sprites.add(Item('Penny', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
+                    item_sprites.add(
+                        Item('Half_Red_Heart', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
+                    player.getting_damage(1)
 
             # проверка перехода в другую комнату
         if (floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].left_door is True and
