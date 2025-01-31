@@ -1,3 +1,5 @@
+from random import randint
+
 import pygame as pygame
 
 # Загрузка изображений сердца
@@ -95,6 +97,7 @@ class Bomb(pygame.sprite.Sprite):
         self.speed = speed
         self.timer = 120  # Время до взрыва (в кадрах)
         self.alive = True
+        self.room = floor.isaac_in
 
     def update(self):
         if not self.alive:
@@ -105,6 +108,9 @@ class Bomb(pygame.sprite.Sprite):
         self.timer -= 1
         if self.timer <= 0:
             self.explode()
+
+        if self.room != floor.isaac_in:
+            self.kill()
 
     def explode(self):
         # Логика взрыва
@@ -264,6 +270,13 @@ class Enemy(pygame.sprite.Sprite):
         self.speed = 3
         self.mask = pygame.mask.from_surface(self.image)
         self.health = 3
+        self.damaging_kd_short_range = 300
+
+    def update(self):
+        if pygame.sprite.collide_mask(self, player):
+            player.getting_damage(1)
+        if self.damaging_kd_short_range > 0:
+            self.damaging_kd_short_range -= 10
 
 
 class Tear(pygame.sprite.Sprite):
@@ -378,10 +391,11 @@ if __name__ == '__main__':
                 player.inventory_bombs -= 1
 
             # чит-клавиша
-            if pygame.key.get_pressed()[pygame.K_p]:  # чит-клавиша(бета-тест)
-                item_sprites.add(Item('bomb', (300, 300), player, room=(2, 2)))
+            if pygame.key.get_pressed()[pygame.K_u]:  # чит-клавиша(бета-тест)
+                item_sprites.add(Item('bomb', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
                 item_sprites.add(Item('Penny', (600, 300), player, room=(2, 2)))
                 item_sprites.add(Item('Half_Red_Heart', (700, 300), player, room=(2, 2)))
+                print(123)
                 player.getting_damage(1)
 
             # проверка перехода в другую комнату
@@ -456,10 +470,9 @@ if __name__ == '__main__':
         draw_health_bar(0, 0, player.health, player.max_health)
         pygame.display.flip()
 
-        # кд стрельбы игрока(оно вообще работает?)
+        # кд стрельбы игрока(оно вообще работает?(да))
         if player_tear_kd > 0:
             player_tear_kd -= 10
         clock.tick(60)
 
     pygame.quit()
-
