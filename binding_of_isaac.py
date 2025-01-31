@@ -277,16 +277,23 @@ class Enemy(pygame.sprite.Sprite):
             player.getting_damage(1)
         if self.damaging_kd_short_range > 0:
             self.damaging_kd_short_range -= 10
+        if self.health < 1:  # проверка на закончившиеся хп
+            self.kill()
+
+    def getting_damage(self, dmg):
+        self.health -= dmg
 
 
 class Tear(pygame.sprite.Sprite):
-    def __init__(self, direction, *group):
+    def __init__(self, direction, is_enemy=False, *group):
         super().__init__(*group)
         # параметры слезы
         self.image = pygame.image.load('tear.png')
         self.rect = self.image.get_rect()
         self.rect.center = player.rect.center
         self.speed = 6
+        self.is_enemy = is_enemy
+        self.mask = pygame.mask.from_surface(self.image)
         # напрвление стрельбы
         if direction == 'left':
             self.direction = 'left'
@@ -310,7 +317,7 @@ class Tear(pygame.sprite.Sprite):
         if self.rect.x < 50 or self.rect.x > 1150 or self.rect.y < 50 or self.rect.y > 650 or self.speed < 0:
             old_center = self.rect.center
             tear_sprites.remove(self)
-
+        # столкновения(прописать)
 
 if __name__ == '__main__':
     pygame.init()
@@ -326,6 +333,7 @@ if __name__ == '__main__':
     door_sprites = pygame.sprite.Group()
     item_sprites = pygame.sprite.Group()
     bomb_sprites = pygame.sprite.Group()
+    enemy_sprites = pygame.sprite.Group()
 
     # ОБЪЕКТ ЭТАЖ
     floor = Floor()
@@ -370,21 +378,21 @@ if __name__ == '__main__':
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            if event.type == pygame.KEYDOWN:
 
                 # стрельба
-                if pygame.key.get_pressed()[pygame.K_LEFT] and player_tear_kd == 0 and player.is_updating:
-                    tear_sprites.add(Tear('left'))
-                    player_tear_kd = 60
-                if pygame.key.get_pressed()[pygame.K_RIGHT] and player_tear_kd == 0 and player.is_updating:
-                    tear_sprites.add(Tear('right'))
-                    player_tear_kd = 60
-                if pygame.key.get_pressed()[pygame.K_UP] and player_tear_kd == 0 and player.is_updating:
-                    tear_sprites.add(Tear('up'))
-                    player_tear_kd = 60
-                if pygame.key.get_pressed()[pygame.K_DOWN] and player_tear_kd == 0 and player.is_updating:
-                    tear_sprites.add(Tear('down'))
-                    player_tear_kd = 60
+            if pygame.key.get_pressed()[pygame.K_LEFT] and player_tear_kd == 0 and player.is_updating:
+                tear_sprites.add(Tear('left'))
+                player_tear_kd = 60
+            if pygame.key.get_pressed()[pygame.K_RIGHT] and player_tear_kd == 0 and player.is_updating:
+                tear_sprites.add(Tear('right'))
+                player_tear_kd = 60
+            if pygame.key.get_pressed()[pygame.K_UP] and player_tear_kd == 0 and player.is_updating:
+                tear_sprites.add(Tear('up'))
+                player_tear_kd = 60
+            if pygame.key.get_pressed()[pygame.K_DOWN] and player_tear_kd == 0 and player.is_updating:
+                tear_sprites.add(Tear('down'))
+                player_tear_kd = 60
+            if event.type == pygame.KEYDOWN:
 
                 # бомбочка
                 if pygame.key.get_pressed()[pygame.K_e] and player.inventory_bombs > 0 and player.is_updating:
@@ -396,7 +404,7 @@ if __name__ == '__main__':
                     item_sprites.add(Item('bomb', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
                     item_sprites.add(Item('Penny', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
                     item_sprites.add(
-                        Item('Half_Red_Heart', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
+                        Item('Red_Heart', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
                     player.getting_damage(1)
 
             # проверка перехода в другую комнату
@@ -454,6 +462,7 @@ if __name__ == '__main__':
         tear_sprites.update()
         bomb_sprites.update()
         item_sprites.update()
+        enemy_sprites.update()
 
         # отрисовка всех деталей
         screen.fill((0, 0, 0))
@@ -466,6 +475,7 @@ if __name__ == '__main__':
         tear_sprites.draw(screen)
         bomb_sprites.draw(screen)
         item_sprites.draw(screen)
+        enemy_sprites.draw(screen)
         screen.blit(bomb_icon, (0, 50))
         screen.blit(money_icon, (0, 100))
         draw_health_bar(0, 0, player.health, player.max_health)
