@@ -1,4 +1,4 @@
-from random import randint
+from random import randint, choice
 
 import pygame as pygame
 
@@ -129,34 +129,59 @@ class Room:  # class of rooms
         self.type_of_room = type  # тип комнаты для будущей сокровищницы, магазина, комнаты босса...
         self.items_in_room = items
         self.items_for_clear = items_winning
-        self.cleared = False  # зачищена ли комната
+        self.cleared = False
+        self.enemies = pygame.sprite.Group()
 
         self.y_of_room, self.x_of_room = coords
         self.up_door, self.bottom_door, self.right_door, self.left_door = False, False, False, False
         # уникальное для каждой комнаты наличие той или иной двери
-        if self.y_of_room > 0:
-            self.up_door = True
-        if self.y_of_room < 4:
-            self.bottom_door = True
-        if self.x_of_room < 4:
-            self.right_door = True
-        if self.x_of_room > 0:
-            self.left_door = True
+        if self.type_of_room == 'default':
+            if self.y_of_room > 0:
+                self.up_door = True
+            if self.y_of_room < 4:
+                self.bottom_door = True
+            if self.x_of_room < 4:
+                self.right_door = True
+            if self.x_of_room > 0:
+                self.left_door = True
+        if self.type_of_room == 'enemy':  # доделывать буду
+            count_of_enemies = randint(1, 4)
+            for i in range(count_of_enemies):
+                self.enemies.add(Enemy(randint(100, 900), randint(200, 500)))
+            self.left_door = False
+            self.right_door = False
+            self.bottom_door = False
+            self.up_door = False
 
     def update(self):
-        self.items_in_room.update()
-        if self.cleared:
+        if self.items_in_room is not None:
+            self.items_in_room.update()
+        if self.items_for_clear is not None and self.cleared:
             self.items_for_clear.update()
+        if not bool(enemy_sprites):
+            if self.y_of_room > 0:
+                self.up_door = True
+            if self.y_of_room < 4:
+                self.bottom_door = True
+            if self.x_of_room < 4:
+                self.right_door = True
+            if self.x_of_room > 0:
+                self.left_door = True
+        if self.x_of_room == floor.isaac_in[0] and self.y_of_room == floor.isaac_in[1]:
+            enemy_sprites.add(self.enemies)
 
 
 class Floor:  # класс обработка всех комнат вместе
+
     def __init__(self):
         # заполнение этажа комнатами
         self.floor = []
         for i in range(5):
             self.floor.append([])
             for j in range(5):
-                self.floor[i].append(Room('default', (i, j)))
+                self.floor[i].append(Room(choice(['default', 'enemy']), (i, j)))
+                if i == 2 and j == 2:
+                    self.floor[i].append(Room('default', (i, j)))
 
         # важная переменная показывающая в какой комнате находится айзек
         self.isaac_in = (2, 2)
@@ -204,7 +229,7 @@ class Floor:  # класс обработка всех комнат вместе
             background.rect = background.image.get_rect(topleft=(0, 0))
 
     def update(self):
-        pass
+        self.floor[self.isaac_in[0]][self.isaac_in[1]].update()
 
 
 class Player(pygame.sprite.Sprite):
@@ -270,11 +295,12 @@ class Enemy(pygame.sprite.Sprite):
         self.speed = 3
         self.mask = pygame.mask.from_surface(self.image)
         self.health = 3
-        self.damaging_kd_short_range = 300
+        self.damaging_kd_short_range = 600
 
     def update(self):
-        if pygame.sprite.collide_mask(self, player):
+        if pygame.sprite.collide_mask(self, player) and self.damaging_kd_short_range == 0:
             player.getting_damage(1)
+            self.damaging_kd_short_range = 600
         if self.damaging_kd_short_range > 0:
             self.damaging_kd_short_range -= 10
         if self.health < 1:  # проверка на закончившиеся хп
@@ -318,6 +344,14 @@ class Tear(pygame.sprite.Sprite):
             old_center = self.rect.center
             tear_sprites.remove(self)
         # столкновения(прописать)
+        if pygame.sprite.collide_mask(self, player) and self.is_enemy:
+            player.getting_damage(1)
+            self.kill()
+        for j in enemy_sprites:
+            if pygame.sprite.collide_mask(self, j):
+                j.getting_damage(1)
+                self.kill()
+
 
 if __name__ == '__main__':
     pygame.init()
@@ -405,6 +439,7 @@ if __name__ == '__main__':
                     item_sprites.add(Item('Penny', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
                     item_sprites.add(
                         Item('Red_Heart', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
+                    enemy_sprites.add(Enemy(randint(100, 900), randint(200, 500)))
                     player.getting_damage(1)
 
             # проверка перехода в другую комнату
@@ -463,6 +498,7 @@ if __name__ == '__main__':
         bomb_sprites.update()
         item_sprites.update()
         enemy_sprites.update()
+        floor.update()
 
         # отрисовка всех деталей
         screen.fill((0, 0, 0))
