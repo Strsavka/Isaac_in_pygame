@@ -288,7 +288,39 @@ class Enemy(pygame.sprite.Sprite):
         self.speed = 3
         self.mask = pygame.mask.from_surface(self.image)
         self.health = 3
-        self.damaging_kd_short_range = 600
+        self.damaging_kd_short_range = 300
+        self.shooting_kd = 600
+        self.dmg_shooting = 1
+
+    def moving(self, player):
+        if player.rect.x > self.rect.x:
+            self.rect.x += self.speed
+        if player.rect.x < self.rect.x:
+            self.rect.x -= self.speed
+        if player.rect.y > self.rect.y:
+            self.rect.y += self.speed
+        if player.rect.y < self.rect.y:
+            self.rect.y -= self.speed
+
+        # ограничение по комнате
+        if self.rect.centerx < 50:
+            self.rect.centerx = 50
+        if self.rect.centerx > 1150:
+            self.rect.centerx = 1150
+        if self.rect.centery < 50:
+            self.rect.centery = 50
+        if self.rect.centery > 605:
+            self.rect.centery = 605
+
+    def shooting(self, player):
+        if player.rect.x > self.rect.x:
+            tear_sprites.add(Tear('right', is_enemy=True, coords=self.rect.center))
+        elif player.rect.x < self.rect.x:
+            tear_sprites.add(Tear('left', is_enemy=True, coords=self.rect.center))
+        elif player.rect.y > self.rect.y:
+            tear_sprites.add(Tear('down', is_enemy=True, coords=self.rect.center))
+        elif player.rect.y < self.rect.y:
+            tear_sprites.add(Tear('up', is_enemy=True, coords=self.rect.center))
 
     def update(self):
         if pygame.sprite.collide_mask(self, player) and self.damaging_kd_short_range == 0:
@@ -298,18 +330,32 @@ class Enemy(pygame.sprite.Sprite):
             self.damaging_kd_short_range -= 10
         if self.health < 1:  # проверка на закончившиеся хп
             self.kill()
+        if self.shooting_kd > 0:
+            self.shooting_kd -= 10
+        if self.shooting_kd == 0:
+            self.shooting(player)
+            self.shooting_kd = 600
+        self.moving(player)
+        if floor.changing_rooms_true:
+            self.kill()
 
     def getting_damage(self, dmg):
         self.health -= dmg
 
 
 class Tear(pygame.sprite.Sprite):
-    def __init__(self, direction, is_enemy=False, *group):
+    def __init__(self, direction, is_enemy=False, coords=None, *group):
         super().__init__(*group)
         # параметры слезы
-        self.image = pygame.image.load('tear.png')
+        if not is_enemy:
+            self.image = pygame.image.load('tear.png')
+        else:
+            self.image = pygame.image.load('tear2.png')
         self.rect = self.image.get_rect()
-        self.rect.center = player.rect.center
+        if not is_enemy:
+            self.rect.center = player.rect.center
+        else:
+            self.rect.center = coords
         self.speed = 6
         self.is_enemy = is_enemy
         self.mask = pygame.mask.from_surface(self.image)
@@ -335,16 +381,30 @@ class Tear(pygame.sprite.Sprite):
             self.rect.y += self.speed
         if self.rect.x < 50 or self.rect.x > 1150 or self.rect.y < 50 or self.rect.y > 650 or self.speed < 0:
             tear_sprites.remove(self)
-        # столкновения(прописать)
+        # столкновения(дописать урон)
         if pygame.sprite.collide_mask(self, player) and self.is_enemy:
             player.getting_damage(1)
             self.kill()
         for j in enemy_sprites:
-            if pygame.sprite.collide_mask(self, j):
+            if pygame.sprite.collide_mask(self, j) and not self.is_enemy:
                 j.getting_damage(1)
                 self.kill()
         if floor.changing_rooms_true:
             self.kill()
+
+
+class Horf(Enemy):
+    def __init__(self, x, y):
+        super().__init__(x, y)
+        self.image = pygame.image.load('Horf.png')
+        self.image = pygame.transform.scale(self.image, (100, 100))
+        self.rect = self.image.get_rect(topleft=(x, y))
+        self.speed = 0
+        self.mask = pygame.mask.from_surface(self.image)
+        self.health = 4
+        self.damaging_kd_short_range = 300
+        self.shooting_kd = 600
+        self.dmg_shooting = 2
 
 
 if __name__ == '__main__':
@@ -433,8 +493,7 @@ if __name__ == '__main__':
                     item_sprites.add(Item('Penny', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
                     item_sprites.add(
                         Item('Red_Heart', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
-                    enemy_sprites.add(Enemy(randint(100, 900), randint(200, 500)))
-                    player.getting_damage(1)
+                    enemy_sprites.add(Horf(randint(100, 900), randint(200, 500)))
 
             # проверка перехода в другую комнату
         if (floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].left_door is True and
