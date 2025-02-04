@@ -125,8 +125,8 @@ class Bomb(pygame.sprite.Sprite):
 
 
 class Room:  # class of rooms
-    def __init__(self, type, coords, items=None, items_winning=None):
-        self.type_of_room = type  # тип комнаты для будущей сокровищницы, магазина, комнаты босса...
+    def __init__(self, type_room, coords, items=None, items_winning=None):
+        self.type_of_room = type_room  # тип комнаты для будущей сокровищницы, магазина, комнаты босса...
         self.items_in_room = items
         self.items_for_clear = items_winning
         self.cleared = False
@@ -159,14 +159,7 @@ class Room:  # class of rooms
         if self.items_for_clear is not None and self.cleared:
             self.items_for_clear.update()
         if not bool(enemy_sprites):
-            if self.y_of_room > 0:
-                self.up_door = True
-            if self.y_of_room < 4:
-                self.bottom_door = True
-            if self.x_of_room < 4:
-                self.right_door = True
-            if self.x_of_room > 0:
-                self.left_door = True
+            self.cleared = True
         if self.x_of_room == floor.isaac_in[0] and self.y_of_room == floor.isaac_in[1]:
             enemy_sprites.add(self.enemies)
 
@@ -183,7 +176,7 @@ class Floor:  # класс обработка всех комнат вместе
                 if i == 2 and j == 2:
                     self.floor[i].append(Room('default', (i, j)))
 
-        # важная переменная показывающая в какой комнате находится айзек
+        # важная переменная, показывающая в какой комнате, находится айзек
         self.isaac_in = (2, 2)
 
         # Создание спрайтов дверей
@@ -341,7 +334,6 @@ class Tear(pygame.sprite.Sprite):
         else:
             self.rect.y += self.speed
         if self.rect.x < 50 or self.rect.x > 1150 or self.rect.y < 50 or self.rect.y > 650 or self.speed < 0:
-            old_center = self.rect.center
             tear_sprites.remove(self)
         # столкновения(прописать)
         if pygame.sprite.collide_mask(self, player) and self.is_enemy:
@@ -351,6 +343,8 @@ class Tear(pygame.sprite.Sprite):
             if pygame.sprite.collide_mask(self, j):
                 j.getting_damage(1)
                 self.kill()
+        if floor.changing_rooms_true:
+            self.kill()
 
 
 if __name__ == '__main__':
