@@ -242,6 +242,13 @@ class Floor:  # класс обработка всех комнат вместе
         pass
 
 
+class MapIcon(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = pygame.image.load()
+        self.rect = self.image.get_rect(topleft=(1000 + 10 * x, 50 + 10 * y))
+
+
 class Player(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
@@ -300,7 +307,7 @@ class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
         self.image = pygame.image.load('monstro.png')
-        self.image = pygame.transform.scale(self.image, (100, 100))
+        self.image = pygame.transform.scale(self.image, (100, 120))
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
         self.speed = 3
@@ -480,7 +487,22 @@ if __name__ == '__main__':
     running = True
     player_tear_kd = 0
 
-    kinds_of_enemies = ['monstro', 'bad_isaac', 'fly']
+    map_icon00 = pygame.sprite.Sprite()
+    map_icon01 = pygame.sprite.Sprite()
+    map_icon02 = pygame.sprite.Sprite()
+    map_icon03 = pygame.sprite.Sprite()
+    map_icon04 = pygame.sprite.Sprite()
+    map_icon10 = pygame.sprite.Sprite()
+    map_icon11 = pygame.sprite.Sprite()
+    map_icon12 = pygame.sprite.Sprite()
+    map_icon13 = pygame.sprite.Sprite()
+    map_icon14 = pygame.sprite.Sprite()
+    map_icon20 = pygame.sprite.Sprite()
+    map_icon21 = pygame.sprite.Sprite()
+    map_icon22 = pygame.sprite.Sprite()
+    map_icon23 = pygame.sprite.Sprite()
+    map_icon24 = pygame.sprite.Sprite()
+
 
     while running:
         for event in pygame.event.get():
@@ -488,21 +510,21 @@ if __name__ == '__main__':
                 running = False
             if event.type == pygame.KEYDOWN:
                 # стрельба
-                if pygame.key.get_pressed()[pygame.K_LEFT] and player_tear_kd == 0 and player.is_updating:
+                if event.key == pygame.K_LEFT and player_tear_kd == 0 and player.is_updating:
                     tear_sprites.add(Tear('left'))
                     player_tear_kd = 60
-                if pygame.key.get_pressed()[pygame.K_RIGHT] and player_tear_kd == 0 and player.is_updating:
+                if event.key == pygame.K_RIGHT and player_tear_kd == 0 and player.is_updating:
                     tear_sprites.add(Tear('right'))
                     player_tear_kd = 60
-                if pygame.key.get_pressed()[pygame.K_UP] and player_tear_kd == 0 and player.is_updating:
+                if event.key == pygame.K_UP and player_tear_kd == 0 and player.is_updating:
                     tear_sprites.add(Tear('up'))
                     player_tear_kd = 60
-                if pygame.key.get_pressed()[pygame.K_DOWN] and player_tear_kd == 0 and player.is_updating:
+                if event.key == pygame.K_DOWN and player_tear_kd == 0 and player.is_updating:
                     tear_sprites.add(Tear('down'))
                     player_tear_kd = 60
 
                 # бомбочка
-                if pygame.key.get_pressed()[pygame.K_e] and player.inventory_bombs > 0 and player.is_updating:
+                if event.key == pygame.K_e and player.inventory_bombs > 0 and player.is_updating:
                     bomb_sprites.add(Bomb(player.rect.center[0], player.rect.center[1]))
                     player.inventory_bombs -= 1
 
@@ -513,6 +535,9 @@ if __name__ == '__main__':
                     item_sprites.add(Item('Red_Heart', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
                     floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].room_enemies.append(Enemy(randint(100, 900), randint(200, 500)))
                     enemy_sprites.add(floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].room_enemies[-1])
+
+                if event.key == pygame.K_TAB:
+                    pass
 
 
         # проверка перехода в другую комнату
