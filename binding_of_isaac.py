@@ -125,14 +125,13 @@ class Room:  # class of rooms
         self.type_of_room = type  # тип комнаты для будущей сокровищницы, магазина, комнаты босса...
         self.items_in_room = items
         self.items_for_clear = items_winning
-
+        self.room_enemies = []
         self.fulled = False
         self.type = type
         self.y_of_room, self.x_of_room = coords
         self.up_door, self.bottom_door, self.right_door, self.left_door = False, False, False, False
         if self.type == 'enemy':
-            self.open_up_door, self.open_bottom_door, self.open_right_door, self.open_left_door = (False, False, False,
-                                                                                                   False)
+            self.open_up_door, self.open_bottom_door, self.open_right_door, self.open_left_door = False, False, False, False
             self.cleared = False
         else:
             self.open_up_door, self.open_bottom_door, self.open_right_door, self.open_left_door = True, True, True, True
@@ -147,7 +146,6 @@ class Room:  # class of rooms
         if self.x_of_room > 0:
             self.left_door = True
         if self.type == 'enemy':
-            self.room_enemies = []
             for i in range(randint(1, 5)):
                 # ВАЖНО! СЮДА ВСТАВЛЯТЬ ВМЕСТО ENEMY КЛАССЫ КОТОРЫЕ ТЫ СДЕЛАЛ ПРО ДРУГИХ ВРАГОВ
                 self.room_enemies.append(Enemy(randint(100, 1100), randint(100, 600)))
@@ -159,16 +157,15 @@ class Room:  # class of rooms
             if floor.isaac_in[0] == self.y_of_room and floor.isaac_in[1] == self.x_of_room:
                 if not self.cleared:
                     if not self.fulled:
-                        for i in range(len(self.room_enemies)):
-                            enemy_sprites.add(self.room_enemies[i])
+                        for i in self.room_enemies:
+                            enemy_sprites.add(i)
                         self.fulled = True
                         floor.left_door.image = pygame.image.load('closed_left_door.png')
                         floor.right_door.image = pygame.image.load('closed_right_door.png')
                         floor.up_door.image = pygame.image.load('closed_up_door.png')
                         floor.bottom_door.image = pygame.image.load('closed_bottom_door.png')
                 else:
-                    self.open_up_door, self.open_bottom_door, self.open_right_door, self.open_left_door = (True, True,
-                                                                                                           True, True)
+                    self.open_up_door, self.open_bottom_door, self.open_right_door, self.open_left_door = True, True, True, True
                     floor.left_door.image = pygame.image.load('open_left_door.png')
                     floor.right_door.image = pygame.image.load('open_right_door.png')
                     floor.up_door.image = pygame.image.load('open_up_door.png')
@@ -295,13 +292,14 @@ class Player(pygame.sprite.Sprite):
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
-        self.image = pygame.image.load('cry_isaac.png')
-        self.image = pygame.transform.scale(self.image, (100, 120))
-        self.rect = self.image.get_rect(topleft=(x, y))
+        self.image = pygame.image.load('monstro.png')
+        self.image = pygame.transform.scale(self.image, (100, 100))
+        self.rect = self.image.get_rect()
+        self.rect.center = (x, y)
         self.speed = 3
         self.mask = pygame.mask.from_surface(self.image)
         self.health = 3
-        self.damaging_kd_short_range = 600
+        self.damaging_kd_short_range = 300
         self.shooting_kd = 600
         self.dmg_shooting = 1
 
@@ -336,17 +334,20 @@ class Enemy(pygame.sprite.Sprite):
 
     def update(self):
         if pygame.sprite.collide_mask(self, player) and self.damaging_kd_short_range == 0:
+            player.getting_damage(1)
+            self.damaging_kd_short_range = 600
+        if self.damaging_kd_short_range > 0:
             self.damaging_kd_short_range -= 10
-        if self.health < 1:  # проверка на закончившиеся хп
-            self.kill()
         if self.shooting_kd > 0:
             self.shooting_kd -= 10
-        if self.shooting_kd == 0:
+        if self.shooting_kd < 0:
             self.shooting(player)
             self.shooting_kd = 600
-        self.moving(player)
-        if floor.changing_rooms_true:
+        if self.health < 1:  # проверка на закончившиеся хп
+            del floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].room_enemies[
+                floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].room_enemies.index(self)]
             self.kill()
+        self.moving(player)
 
     def getting_damage(self, dmg):
         self.health -= dmg
@@ -504,7 +505,6 @@ if __name__ == '__main__':
                     item_sprites.add(Item('Penny', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
                     item_sprites.add(Item('Red_Heart', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
                     enemy_sprites.add(Enemy(randint(100, 900), randint(200, 500)))
-                    enemy_sprites.add(Horf(randint(100, 900), randint(200, 500)))
 
         # проверка перехода в другую комнату
         # важно также проверка на зачистку комнаты
