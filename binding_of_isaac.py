@@ -148,7 +148,8 @@ class Room:  # class of rooms
         if self.type == 'enemy':
             for i in range(randint(1, 5)):
                 # ВАЖНО! СЮДА ВСТАВЛЯТЬ ВМЕСТО ENEMY КЛАССЫ КОТОРЫЕ ТЫ СДЕЛАЛ ПРО ДРУГИХ ВРАГОВ
-                self.room_enemies.append(Enemy(randint(100, 1100), randint(100, 600)))
+                self.room_enemies.append(
+                    choice([Enemy(randint(100, 1100), randint(100, 600)), Horf(randint(100, 1100), randint(100, 600))]))
 
     def room_update(self):
         # Самостоятельный апдейт комнаты, обновляется только текущая комната
@@ -172,6 +173,12 @@ class Room:  # class of rooms
                     floor.bottom_door.image = pygame.image.load('open_bottom_door.png')
             if not bool(self.room_enemies):
                 self.cleared = True
+            else:
+                self.cleared = False
+                floor.left_door.image = pygame.image.load('closed_left_door.png')
+                floor.right_door.image = pygame.image.load('closed_right_door.png')
+                floor.up_door.image = pygame.image.load('closed_up_door.png')
+                floor.bottom_door.image = pygame.image.load('closed_bottom_door.png')
 
 
 class Floor:  # класс обработка всех комнат вместе
@@ -504,7 +511,9 @@ if __name__ == '__main__':
                     item_sprites.add(Item('bomb', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
                     item_sprites.add(Item('Penny', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
                     item_sprites.add(Item('Red_Heart', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
-                    enemy_sprites.add(Enemy(randint(100, 900), randint(200, 500)))
+                    floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].room_enemies.append(Enemy(randint(100, 900), randint(200, 500)))
+                    enemy_sprites.add(floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].room_enemies[-1])
+
 
         # проверка перехода в другую комнату
         # важно также проверка на зачистку комнаты
