@@ -40,7 +40,7 @@ class Item(pygame.sprite.Sprite):
         super().__init__()
         self.player_getting = player_getting
         self.name = name
-        self.image = pygame.image.load(self.name + '.png')
+        self.image = pygame.image.load('data/' + self.name + '.png')
         self.image = pygame.transform.scale(self.image, (50, 50))
         self.rect = self.image.get_rect()
         self.rect.center = pos
@@ -78,6 +78,15 @@ class Item(pygame.sprite.Sprite):
         elif self.name == 'Half_Red_Heart':
             if player_getting.health + 1 <= player_getting.max_health:
                 player_getting.health += 1
+        elif self.name == 'speed_potion':
+            player_getting.speed += 1
+        elif self.name == 'strength_potion':
+            player_getting.shoot_dmg += 1
+        elif self.name == 'damage_potion':
+            player_getting.health -= 1
+        elif self.name == 'size_potion':
+            player_getting.tear_size[0] += 5
+            player_getting.tear_size[1] += 5
         self.lying = False
 
 
@@ -86,7 +95,7 @@ class Bomb(pygame.sprite.Sprite):
         super().__init__()
 
         # Основные параметры бомбы
-        self.image = pygame.image.load('bomb.png')
+        self.image = pygame.image.load('data/bomb.png')
         self.image = pygame.transform.scale(self.image, (50, 50))
         self.rect = self.image.get_rect()
         self.rect.center = (player.rect.center[0], player.rect.center[1] + 50)
@@ -267,6 +276,8 @@ class Player(pygame.sprite.Sprite):
         self.max_health = 6  # макс кол-во хп
         self.soul_health = 0  # сердца душ(если хочешь реализовать, то надо переписывать логику отображения сердец)
         self.is_updating = True
+        self.shoot_dmg = 1
+        self.tear_size = (50, 50)
 
     def update(self):
         # ходьба
@@ -338,13 +349,13 @@ class Enemy(pygame.sprite.Sprite):
 
     def shooting(self, player):
         if player.rect.x > self.rect.x:
-            tear_sprites.add(Tear('right', is_enemy=True, coords=self.rect.center))
+            tear_sprites.add(Tear('right', self.dmg_shooting, is_enemy=True, coords=self.rect.center))
         elif player.rect.x < self.rect.x:
-            tear_sprites.add(Tear('left', is_enemy=True, coords=self.rect.center))
+            tear_sprites.add(Tear('left', self.dmg_shooting, is_enemy=True, coords=self.rect.center))
         elif player.rect.y > self.rect.y:
-            tear_sprites.add(Tear('down', is_enemy=True, coords=self.rect.center))
+            tear_sprites.add(Tear('down', self.dmg_shooting, is_enemy=True, coords=self.rect.center))
         elif player.rect.y < self.rect.y:
-            tear_sprites.add(Tear('up', is_enemy=True, coords=self.rect.center))
+            tear_sprites.add(Tear('up', self.dmg_shooting, is_enemy=True, coords=self.rect.center))
 
     def update(self):
         if pygame.sprite.collide_mask(self, player) and self.damaging_kd_short_range == 0:
@@ -368,11 +379,12 @@ class Enemy(pygame.sprite.Sprite):
 
 
 class Tear(pygame.sprite.Sprite):
-    def __init__(self, direction, is_enemy=False, coords=None, *group):
+    def __init__(self, direction, damage, is_enemy=False, coords=None, size=(40, 40), *group):
         super().__init__(*group)
         # параметры слезы
         if not is_enemy:
             self.image = pygame.image.load('tear.png')
+            self.image = pygame.transform.scale(self.image, size)
         else:
             self.image = pygame.image.load('tear2.png')
         self.rect = self.image.get_rect()
@@ -392,6 +404,7 @@ class Tear(pygame.sprite.Sprite):
             self.direction = 'up'
         else:
             self.direction = 'down'
+        self.dmg = damage
 
     def update(self):
         # движение стрельбы
@@ -407,11 +420,11 @@ class Tear(pygame.sprite.Sprite):
             tear_sprites.remove(self)
         # столкновения(дописать урон)
         if pygame.sprite.collide_mask(self, player) and self.is_enemy:
-            player.getting_damage(1)
+            player.getting_damage(self.dmg)
             self.kill()
         for j in enemy_sprites:
             if pygame.sprite.collide_mask(self, j) and not self.is_enemy:
-                j.getting_damage(1)
+                j.getting_damage(self.dmg)
                 self.kill()
         if floor.changing_rooms_true:
             self.kill()
@@ -471,11 +484,11 @@ if __name__ == '__main__':
     # часики
     clock = pygame.time.Clock()
 
-    bomb_icon = pygame.image.load('bomb.png')
+    bomb_icon = pygame.image.load('data/bomb.png')
     bomb_icon = pygame.transform.scale(bomb_icon, (50, 50))
     bomb_counter_font = pygame.font.SysFont("Times New Roman", 50)
     money_counter_font = pygame.font.SysFont("Times New Roman", 50)
-    money_icon = pygame.image.load('Penny.png')
+    money_icon = pygame.image.load('data/Penny.png')
     money_icon = pygame.transform.scale(money_icon, (50, 50))
     health_empty_icon = pygame.image.load('heart_empty.png')
     health_empty_icon = pygame.transform.scale(health_empty_icon, (50, 50))
@@ -503,7 +516,6 @@ if __name__ == '__main__':
     map_icon23 = pygame.sprite.Sprite()
     map_icon24 = pygame.sprite.Sprite()
 
-
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -511,16 +523,16 @@ if __name__ == '__main__':
             if event.type == pygame.KEYDOWN:
                 # стрельба
                 if event.key == pygame.K_LEFT and player_tear_kd == 0 and player.is_updating:
-                    tear_sprites.add(Tear('left'))
+                    tear_sprites.add(Tear('left', player.shoot_dmg))
                     player_tear_kd = 60
                 if event.key == pygame.K_RIGHT and player_tear_kd == 0 and player.is_updating:
-                    tear_sprites.add(Tear('right'))
+                    tear_sprites.add(Tear('right', player.shoot_dmg))
                     player_tear_kd = 60
                 if event.key == pygame.K_UP and player_tear_kd == 0 and player.is_updating:
-                    tear_sprites.add(Tear('up'))
+                    tear_sprites.add(Tear('up', player.shoot_dmg))
                     player_tear_kd = 60
                 if event.key == pygame.K_DOWN and player_tear_kd == 0 and player.is_updating:
-                    tear_sprites.add(Tear('down'))
+                    tear_sprites.add(Tear('down', player.shoot_dmg))
                     player_tear_kd = 60
 
                 # бомбочка
@@ -533,12 +545,12 @@ if __name__ == '__main__':
                     item_sprites.add(Item('bomb', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
                     item_sprites.add(Item('Penny', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
                     item_sprites.add(Item('Red_Heart', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
-                    floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].room_enemies.append(Enemy(randint(100, 900), randint(200, 500)))
+                    floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].room_enemies.append(
+                        Enemy(randint(100, 900), randint(200, 500)))
                     enemy_sprites.add(floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].room_enemies[-1])
 
                 if event.key == pygame.K_TAB:
                     pass
-
 
         # проверка перехода в другую комнату
         # важно также проверка на зачистку комнаты
