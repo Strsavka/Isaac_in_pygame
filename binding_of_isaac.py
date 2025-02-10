@@ -17,7 +17,6 @@ im_not_seen_room = pygame.transform.scale(im_not_seen_room, (40, 32))
 im_now_room = pygame.image.load('now_room_icon.png')
 im_now_room = pygame.transform.scale(im_now_room, (40, 32))
 
-
 # Размеры одного сегмента сердца
 HEART_WIDTH = 50
 HEART_HEIGHT = 50
@@ -92,10 +91,7 @@ class Item(pygame.sprite.Sprite):
         elif self.name == 'damage_potion':
             player_getting.health -= 1
         elif self.name == 'size_potion':
-            player_getting.tear_size[0] += 5
-            player_getting.tear_size[1] += 5
-        else:
-            pass
+            player_getting.tear_size = tuple(int(player_getting.tear_size[0] + 10, player_getting.tear_size[1] + 10))
         self.lying = False
 
 
@@ -146,6 +142,7 @@ class Room:  # class of rooms
         self.fulled = False  # заполнение комнаты врагами
         self.type = type
         self.y_of_room, self.x_of_room = coords
+        self.items_getted = False
         self.up_door, self.bottom_door, self.right_door, self.left_door = False, False, False, False
         if self.type == 'enemy':
             self.open_up_door, self.open_bottom_door, self.open_right_door, self.open_left_door = False, False, False, False
@@ -187,6 +184,17 @@ class Room:  # class of rooms
                     floor.right_door.image = pygame.image.load('open_right_door.png')
                     floor.up_door.image = pygame.image.load('open_up_door.png')
                     floor.bottom_door.image = pygame.image.load('open_bottom_door.png')
+                    if self.items_getted is False:
+                        item_sprites.add(choice([Item('speed_potion', (randint(100, 1100), randint(100, 600)), player,
+                                                      room=(self.x_of_room, self.y_of_room)),
+                                                 Item('size_potion', (randint(100, 1100), randint(100, 600)), player,
+                                                      room=(self.x_of_room, self.y_of_room)),
+                                                 Item('strength_potion', (randint(100, 1100), randint(100, 600)),
+                                                      player,
+                                                      room=(self.x_of_room, self.y_of_room)),
+                                                 Item('damage_potion', (randint(100, 1100), randint(100, 600)), player,
+                                                      room=(self.x_of_room, self.y_of_room))]))
+                    self.items_getted = True
             if not bool(self.room_enemies):
                 self.cleared = True
             else:
@@ -195,6 +203,9 @@ class Room:  # class of rooms
                 floor.right_door.image = pygame.image.load('closed_right_door.png')
                 floor.up_door.image = pygame.image.load('closed_up_door.png')
                 floor.bottom_door.image = pygame.image.load('closed_bottom_door.png')
+
+        elif self.type == 'default':
+            pass
 
 
 class Floor:  # класс обработка всех комнат вместе
@@ -376,16 +387,18 @@ class Enemy(pygame.sprite.Sprite):
             self.rect.centery = 605
 
     def shooting(self, player):
-        if player.rect.x > self.rect.x:
+        if int(player.rect.x) > int(self.rect.x) and abs(int(player.rect.x) - int(self.rect.x)) > abs(
+                int(player.rect.y) - int(self.rect.y)):
             tear_sprites.add(Tear('right', self.dmg_shooting, is_enemy=True, coords=self.rect.center))
-        elif player.rect.x < self.rect.x:
+        if int(player.rect.x) < int(self.rect.x) and abs(int(player.rect.x) - int(self.rect.x)) > abs(
+                int(player.rect.y) - int(self.rect.y)):
             tear_sprites.add(Tear('left', self.dmg_shooting, is_enemy=True, coords=self.rect.center))
-        elif player.rect.y > self.rect.y:
+        if int(player.rect.y) > int(self.rect.y) and abs(int(player.rect.x) - int(self.rect.x)) < abs(
+                int(player.rect.y) - int(self.rect.y)):
             tear_sprites.add(Tear('down', self.dmg_shooting, is_enemy=True, coords=self.rect.center))
-        elif player.rect.y < self.rect.y:
+        if int(player.rect.y) < int(self.rect.y) and abs(int(player.rect.x) - int(self.rect.x)) < abs(
+                int(player.rect.y) - int(self.rect.y)):
             tear_sprites.add(Tear('up', self.dmg_shooting, is_enemy=True, coords=self.rect.center))
-        else:
-            pass
 
     def update(self):
         if pygame.sprite.collide_mask(self, player) and self.damaging_kd_short_range == 0:
@@ -393,7 +406,7 @@ class Enemy(pygame.sprite.Sprite):
             self.damaging_kd_short_range = 600
         if self.damaging_kd_short_range > 0:
             self.damaging_kd_short_range -= 10
-        if self.shooting_kd > 0:
+        if self.shooting_kd > -20:
             self.shooting_kd -= 10
         if self.shooting_kd < 0:
             self.shooting(player)
@@ -416,6 +429,7 @@ class Tear(pygame.sprite.Sprite):
             self.image = pygame.image.load('tear.png')
         else:
             self.image = pygame.image.load('tear2.png')
+            self.image = pygame.transform.scale(self.image, (40, 40))
         self.rect = self.image.get_rect()
         if not is_enemy:
             self.rect.center = player.rect.center
