@@ -91,7 +91,7 @@ class Item(pygame.sprite.Sprite):
         elif self.name == 'damage_potion':
             player_getting.health -= 1
         elif self.name == 'size_potion':
-            player_getting.tear_size = tuple(int(player_getting.tear_size[0] + 10, player_getting.tear_size[1] + 10))
+            player_getting.tear_size = tuple([int(player_getting.tear_size[0]) + 10, int(player_getting.tear_size[1]) + 10])
         self.lying = False
 
 
@@ -589,9 +589,15 @@ if __name__ == '__main__':
                     item_sprites.add(Item('bomb', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
                     item_sprites.add(Item('Penny', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
                     item_sprites.add(Item('Red_Heart', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
-                    floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].room_enemies.append(Enemy(randint(100, 900),
-                                                                                                randint(200, 500)))
-                    enemy_sprites.add(floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].room_enemies[-1])
+                    item_sprites.add(choice([Item('speed_potion', (randint(100, 1100), randint(100, 600)), player,
+                                                  room=(2, 2)),
+                                             Item('size_potion', (randint(100, 1100), randint(100, 600)), player,
+                                                  room=(2, 2)),
+                                             Item('strength_potion', (randint(100, 1100), randint(100, 600)),
+                                                  player,
+                                                  room=(2, 2)),
+                                             Item('damage_potion', (randint(100, 1100), randint(100, 600)), player,
+                                                  room=(2, 2))]))
 
                 # вызов мини-карты
                 if event.key == pygame.K_TAB:

@@ -1,7 +1,6 @@
 from random import randint, choice
 import pygame as pygame
 
-
 # Загрузка изображений сердца
 heart_full = pygame.image.load("heart_full.png")
 heart_half = pygame.image.load("heart_half.png")
@@ -17,7 +16,6 @@ im_not_seen_room = pygame.image.load('not_seen_room_icon.png')
 im_not_seen_room = pygame.transform.scale(im_not_seen_room, (40, 32))
 im_now_room = pygame.image.load('now_room_icon.png')
 im_now_room = pygame.transform.scale(im_now_room, (40, 32))
-
 
 # Размеры одного сегмента сердца
 HEART_WIDTH = 50
@@ -365,16 +363,18 @@ class Enemy(pygame.sprite.Sprite):
             self.rect.centery = 605
 
     def shooting(self, player):
-        if player.rect.x > self.rect.x:
+        if int(player.rect.x) > int(self.rect.x) and abs(int(player.rect.x) - int(self.rect.x)) > abs(
+                int(player.rect.y) - int(self.rect.y)):
             tear_sprites.add(Tear('right', self.dmg_shooting, is_enemy=True, coords=self.rect.center))
-        elif player.rect.x < self.rect.x:
+        if int(player.rect.x) < int(self.rect.x) and abs(int(player.rect.x) - int(self.rect.x)) > abs(
+                int(player.rect.y) - int(self.rect.y)):
             tear_sprites.add(Tear('left', self.dmg_shooting, is_enemy=True, coords=self.rect.center))
-        elif player.rect.y > self.rect.y:
+        if int(player.rect.y) > int(self.rect.y) and abs(int(player.rect.x) - int(self.rect.x)) < abs(
+                int(player.rect.y) - int(self.rect.y)):
             tear_sprites.add(Tear('down', self.dmg_shooting, is_enemy=True, coords=self.rect.center))
-        elif player.rect.y < self.rect.y:
+        if int(player.rect.y) < int(self.rect.y) and abs(int(player.rect.x) - int(self.rect.x)) < abs(
+                int(player.rect.y) - int(self.rect.y)):
             tear_sprites.add(Tear('up', self.dmg_shooting, is_enemy=True, coords=self.rect.center))
-        else:
-            pass
 
     def update(self):
         if pygame.sprite.collide_mask(self, player) and self.damaging_kd_short_range == 0:
@@ -382,7 +382,7 @@ class Enemy(pygame.sprite.Sprite):
             self.damaging_kd_short_range = 600
         if self.damaging_kd_short_range > 0:
             self.damaging_kd_short_range -= 10
-        if self.shooting_kd > 0:
+        if self.shooting_kd > -20:
             self.shooting_kd -= 10
         if self.shooting_kd < 0:
             self.shooting(player)
@@ -405,6 +405,7 @@ class Tear(pygame.sprite.Sprite):
             self.image = pygame.image.load('tear.png')
         else:
             self.image = pygame.image.load('tear2.png')
+            self.image = pygame.transform.scale(self.image, (40, 40))
         self.rect = self.image.get_rect()
         if not is_enemy:
             self.rect.center = player.rect.center
@@ -531,8 +532,8 @@ if __name__ == '__main__':
 
     intro_text = ['Нажмите ENTER чтобы начать игру, чтобы выйти ESCAPE',
                   'Перед выходом из игры сохраните накопившиеся результаты', '', 'Управление персонажем WASD',
-                  'Атака через кнопки вверх вниз вправо влево', '', 'Начните новую игру или выберите сохранённую версию']
-
+                  'Атака через кнопки вверх вниз вправо влево', '',
+                  'Начните новую игру или выберите сохранённую версию']
 
     # Игровой цикл
     while running:
