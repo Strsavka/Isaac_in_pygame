@@ -46,7 +46,6 @@ def draw_health_bar(x, y, health, max_health):
 class Game:
     def __init__(self):
         # общие свойства
-        self.player_tear_kd = 0
         self.map_show = False
 
         # группы спрайтов
@@ -73,10 +72,8 @@ class Game:
         self.changing_background.rect = self.changing_background.image.get_rect(topleft=(-1200, 0))
         self.all_sprites.add(self.changing_background)
 
-        # ОБЪЕКТ ЭТАЖ
-        self.floor = Floor()
-        self.player = Player(550, 300, 'isaac', 10, 10, 0, 3, 3)
-        self.all_sprites.add(self.player)
+
+game = Game()
 
 
 class Item(pygame.sprite.Sprite):
@@ -526,8 +523,10 @@ if __name__ == '__main__':
     screen_size = WIDTH, HEIGHT = 1200, 700
     screen = pygame.display.set_mode(screen_size)
 
-    player = game.player
-    floor = game.floor
+    floor = Floor()
+
+    player = Player(550, 300, 'isaac', 10, 10, 0, 3, 3)
+    game.all_sprites.add(player)
 
     # часики
     clock = pygame.time.Clock()
@@ -551,6 +550,7 @@ if __name__ == '__main__':
     running = True
     start_restart = False
     first_entry = True
+    player_kd = 0
 
     font = pygame.font.Font(None, 30)
 
@@ -574,18 +574,18 @@ if __name__ == '__main__':
                     player.rect.y += player.speed
 
                 # Стрельба очередью зажатием клавиши
-                if pygame.key.get_pressed()[pygame.K_LEFT] and game.player_tear_kd == 0:
+                if pygame.key.get_pressed()[pygame.K_LEFT] and player_kd == 0:
                     game.tear_sprites.add(Tear('left', player.shoot_dmg))
-                    player_tear_kd = 90
-                if pygame.key.get_pressed()[pygame.K_RIGHT] and game.player_tear_kd == 0:
+                    player_kd = 90
+                if pygame.key.get_pressed()[pygame.K_RIGHT] and player_kd == 0:
                     game.tear_sprites.add(Tear('right', player.shoot_dmg))
-                    player_tear_kd = 90
-                if pygame.key.get_pressed()[pygame.K_UP] and game.player_tear_kd == 0:
+                    player_kd = 90
+                if pygame.key.get_pressed()[pygame.K_UP] and player_kd == 0:
                     game.tear_sprites.add(Tear('up', player.shoot_dmg))
-                    player_tear_kd = 90
-                if pygame.key.get_pressed()[pygame.K_DOWN] and game.player_tear_kd == 0:
+                    player_kd = 90
+                if pygame.key.get_pressed()[pygame.K_DOWN] and player_kd == 0:
                     game.tear_sprites.add(Tear('down', player.shoot_dmg))
-                    player_tear_kd = 90
+                    player_kd = 90
 
             # только одноразовые действия требующие одного нажатия
             for event in pygame.event.get():
@@ -706,8 +706,8 @@ if __name__ == '__main__':
             draw_health_bar(0, 0, player.health, player.max_health)
 
             # кд стрельбы игрока
-            if game.player_tear_kd > 0:
-                game.player_tear_kd -= 10
+            if player_kd > 0:
+                player_kd -= 10
             clock.tick(60)
 
         elif first_entry:
@@ -739,6 +739,11 @@ if __name__ == '__main__':
 
                     if event.key == pygame.K_n:
                         game = Game()
+
+                        floor = Floor()
+
+                        player = Player(550, 300, 'isaac', 10, 10, 0, 3, 3)
+                        game.all_sprites.add(player)
                         start_restart = True
 
                 if event.type == pygame.QUIT:
