@@ -211,9 +211,11 @@ class Room:  # class of rooms
         self.fulled = False  # заполнение комнаты врагами
         self.items_getted = False
         self.type = type
+        self.once = True
         self.y_of_room, self.x_of_room = coords
+        self.coords = coords
         self.up_door, self.bottom_door, self.right_door, self.left_door = False, False, False, False
-        if self.type == 'enemy':
+        if self.type == 'enemy' or self.type == 'boss':
             self.open_up_door, self.open_bottom_door, self.open_right_door, self.open_left_door = False, False, False, False
             self.cleared = False
         else:
@@ -232,11 +234,21 @@ class Room:  # class of rooms
             for i in range(randint(1, 5)):
                 self.room_enemies.append(
                     choice([Enemy(randint(100, 1100), randint(100, 600)), Horf(randint(100, 1100), randint(100, 600))]))
+        elif self.type == 'boss':
+            self.room_enemies.append(Boss(600, 350))
+        # elif self.type == 'trade':
+        #     game.all_sprites.add(Trader((600, 350), room=(self.x_of_room, self.y_of_room)))
+        #     game.item_sprites.add(ItemTrade('bomb', (300, 500), player_getting=player, room=(self.x_of_room, self.y_of_room)))
+        #     game.item_sprites.add(ItemTrade('Red_Heart', (500, 500), player_getting=player, room=(self.x_of_room, self.y_of_room)))
+        #     game.item_sprites.add(
+        #         choice([ItemTrade('speed_potion', (700, 500), player_getting=player, room=(self.x_of_room, self.y_of_room)),
+        #                 ItemTrade('strength_potion', (700, 500), player_getting=player, room=(self.x_of_room, self.y_of_room)),
+        #                 ItemTrade('size_potion', (700, 500), player_getting=player, room=(self.x_of_room, self.y_of_room))]))
 
     def room_update(self):
         # Самостоятельный апдейт комнаты, обновляется только текущая комната
         # Здесь прописано заполнение комнаты врагами и открытие закрытие дверей
-        if self.type == 'enemy':
+        if self.type == 'enemy' or self.type == 'boss':
             if floor.isaac_in[0] == self.y_of_room and floor.isaac_in[1] == self.x_of_room:
                 if not self.cleared:
                     if not self.fulled:
@@ -253,19 +265,6 @@ class Room:  # class of rooms
                     floor.right_door.image = pygame.image.load('open_right_door.png')
                     floor.up_door.image = pygame.image.load('open_up_door.png')
                     floor.bottom_door.image = pygame.image.load('open_bottom_door.png')
-                    if self.items_getted is False:
-                        game.item_sprites.add(
-                            choice([Item('speed_potion', (randint(100, 1100), randint(100, 600)),
-                                         player, room=(self.y_of_room, self.x_of_room)),
-                                    Item('size_potion', (randint(100, 1100), randint(100, 600)),
-                                         player, room=(self.y_of_room, self.x_of_room)),
-                                    Item('strength_potion', (randint(100, 1100), randint(100, 600)),
-                                         player, room=(self.y_of_room, self.x_of_room)),
-                                    Item('damage_potion', (randint(100, 1100), randint(100, 600)),
-                                         player, room=(self.y_of_room, self.x_of_room)),
-                                    Item('Red_Heart', (randint(100, 1100), randint(100, 600)),
-                                         player, room=(self.y_of_room, self.x_of_room))]))
-                    self.items_getted = True
             if not bool(self.room_enemies):
                 self.cleared = True
             else:
@@ -274,6 +273,96 @@ class Room:  # class of rooms
                 floor.right_door.image = pygame.image.load('closed_right_door.png')
                 floor.up_door.image = pygame.image.load('closed_up_door.png')
                 floor.bottom_door.image = pygame.image.load('closed_bottom_door.png')
+            if self.cleared and (self.type == 'enemy' or self.type == 'boss'):
+                if self.once:
+                    for i in range(2):
+                        game.item_sprites.add(Item('Red_Heart', (randint(100, 1100), randint(100, 600)), player,
+                                                   room=(self.x_of_room - 1, self.y_of_room - 1)))
+                        game.item_sprites.add(
+                            choice([Item('speed_potion', (randint(100, 1100), randint(100, 600)),
+                                         player, room=(self.x_of_room - 1, self.y_of_room - 1)),
+                                    Item('size_potion', (randint(100, 1100), randint(100, 600)),
+                                         player, room=(self.x_of_room - 1, self.y_of_room - 1)),
+                                    Item('strength_potion', (randint(100, 1100), randint(100, 600)),
+                                         player, room=(self.x_of_room - 1, self.y_of_room - 1)),
+                                    Item('damage_potion', (randint(100, 1100), randint(100, 600)),
+                                         player, room=(self.x_of_room - 1, self.y_of_room - 1))]))
+                    if self.type == 'boss':
+                        for i in range(5):
+                            game.item_sprites.add(
+                                choice([Item('speed_potion', (randint(100, 1100), randint(100, 600)),
+                                             player, room=(self.x_of_room, self.y_of_room)),
+                                        Item('size_potion', (randint(100, 1100), randint(100, 600)),
+                                             player, room=(self.x_of_room, self.y_of_room)),
+                                        Item('strength_potion', (randint(100, 1100), randint(100, 600)),
+                                             player, room=(self.x_of_room, self.y_of_room)),
+                                        Item('damage_potion', (randint(100, 1100), randint(100, 600)),
+                                             player, room=(self.x_of_room, self.y_of_room))]))
+                    self.once = False
+
+
+class Trader(pygame.sprite.Sprite):
+    def __init__(self, pos, room=(0, 0)):
+        super().__init__()
+        self.image = pygame.image.load('data/trader.png')
+        self.image = pygame.transform.scale(self.image, (150, 150))
+        self.rect = self.image.get_rect()
+        self.rect.center = pos
+        self.pos = pos
+        self.mask = pygame.mask.from_surface(self.image)
+        self.room = room
+
+    def update(self):
+        if self.room != floor.isaac_in:
+            self.rect.center = (-1000000, -10000000)
+        elif self.room == floor.isaac_in:
+            self.rect.center = self.pos
+
+
+class ItemTrade(Item):
+    def add_to_inventory(self, player_getting):
+        if self.name == 'bomb':
+            if player_getting.inventory_money >= 2:
+                player_getting.inventory_bombs += 1
+                player_getting.inventory_money -= 2
+                self.lying = False
+        elif self.name == 'Red_Heart':
+            if player_getting.inventory_money >= 5:
+                if player_getting.health + 1 <= player_getting.max_health:
+                    player_getting.health += 1
+                    if player_getting.health + 1 <= player_getting.max_health:
+                        player_getting.health += 1
+                player_getting.inventory_money -= 5
+                self.lying = False
+        elif self.name == 'Half_Red_Heart':
+            if player_getting.inventory_money >= 3:
+                if player_getting.health + 1 <= player_getting.max_health:
+                    player_getting.health += 1
+                player_getting.inventory_money -= 3
+                self.lying = False
+        elif self.name == 'speed_potion':
+            if player_getting.inventory_money >= 10:
+                player_getting.speed += 1
+                player_getting.inventory_money -= 10
+                self.lying = False
+        elif self.name == 'strength_potion':
+            if player_getting.inventory_money >= 10:
+                player_getting.shoot_dmg += 1
+                player_getting.inventory_money -= 10
+                self.lying = False
+        elif self.name == 'damage_potion':
+            if player_getting.inventory_money >= 10:
+                player_getting.health -= 1
+                player_getting.inventory_money -= 10
+                self.lying = False
+        elif self.name == 'size_potion':
+            if player_getting.inventory_money >= 10:
+                player_getting.tear_size = tuple(
+                    [player_getting.tear_size[0] + 10, player_getting.tear_size[1] + 10])
+                player_getting.inventory_money -= 10
+                self.lying = False
+        else:
+            pass
 
 
 class Floor:  # класс обработка всех комнат вместе
@@ -284,9 +373,12 @@ class Floor:  # класс обработка всех комнат вместе
             self.floor.append([])
             for j in range(5):
                 if i == 2 and j == 2:
-                    self.floor[i].append(Room('default', (i, j)))
+                    self.floor[i].append(Room('boss', (i, j)))
                 else:
-                    self.floor[i].append(Room(choice(['default', 'enemy', 'enemy']), (i, j)))
+                    self.floor[i].append(
+                        Room(choice(
+                            ['default', 'enemy', 'enemy', 'enemy', 'trade', 'enemy', 'enemy', 'enemy', 'trade', 'enemy',
+                             'boss']), (i, j)))
         self.icon_map = []
         for i in range(5):
             self.icon_map.append([])
@@ -550,6 +642,23 @@ class Horf(Enemy):
         self.dmg_shooting = 2
 
 
+class Boss(Enemy):
+    def __init__(self, x, y):
+        super().__init__(x, y)
+        self.image = pygame.image.load('data/boss.png')
+        self.image = pygame.transform.scale(self.image, (200, 200))
+        self.rect = self.image.get_rect(topleft=(x, y))
+        self.speed = 7
+        self.mask = pygame.mask.from_surface(self.image)
+        self.health = 100
+        self.damaging_kd_short_range = 300
+        self.shooting_kd = 1800
+        self.dmg_shooting = 0
+
+    def shooting(self, player):
+        pass
+
+
 if __name__ == '__main__':
     pygame.init()
     pygame.display.set_caption('The Binding of Isaac')
@@ -615,16 +724,16 @@ if __name__ == '__main__':
 
                 # Стрельба очередью зажатием клавиши
                 if pygame.key.get_pressed()[pygame.K_LEFT] and player_kd == 0:
-                    game.tear_sprites.add(Tear('left', player.shoot_dmg))
+                    game.tear_sprites.add(Tear('left', player.shoot_dmg, size=player.tear_size))
                     player_kd = game.base_firing_rate
                 if pygame.key.get_pressed()[pygame.K_RIGHT] and player_kd == 0:
-                    game.tear_sprites.add(Tear('right', player.shoot_dmg))
+                    game.tear_sprites.add(Tear('right', player.shoot_dmg, size=player.tear_size))
                     player_kd = game.base_firing_rate
                 if pygame.key.get_pressed()[pygame.K_UP] and player_kd == 0:
-                    game.tear_sprites.add(Tear('up', player.shoot_dmg))
+                    game.tear_sprites.add(Tear('up', player.shoot_dmg, size=player.tear_size))
                     player_kd = game.base_firing_rate
                 if pygame.key.get_pressed()[pygame.K_DOWN] and player_kd == 0:
-                    game.tear_sprites.add(Tear('down', player.shoot_dmg))
+                    game.tear_sprites.add(Tear('down', player.shoot_dmg, size=player.tear_size))
                     player_kd = game.base_firing_rate
 
             # только одноразовые действия требующие одного нажатия
@@ -639,15 +748,12 @@ if __name__ == '__main__':
 
                     # чит-клавиша
                     if event.key == pygame.K_p:  # чит-клавиша(бета-тест)
-                        game.item_sprites.add(Item('bomb', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
-                        # game.item_sprites.add(
-                        #     Item('Penny', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
-                        game.item_sprites.add(Item('size_potion', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
-                        game.item_sprites.add(Item('Red_Heart', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
-                        # floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].room_enemies.append(Enemy(randint(100, 900),
-                        #                                                                             randint(200, 500)))
-                        # game.enemy_sprites.add(floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].room_enemies[-1])
-
+                        game.item_sprites.add(
+                            Item('size_potion', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
+                        game.item_sprites.add(
+                            Item('Penny', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
+                        game.item_sprites.add(
+                            Item('Red_Heart', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
                     # вызов мини-карты
                     if event.key == pygame.K_TAB:
                         if game.map_show:
