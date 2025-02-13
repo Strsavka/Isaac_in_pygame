@@ -77,6 +77,34 @@ class Game:
         self.changing_background.rect = self.changing_background.image.get_rect(topleft=(-1200, 0))
         self.all_sprites.add(self.changing_background)
 
+    def update_game(self):
+        # общие свойства
+        self.map_show = False
+
+        # группы спрайтов
+        self.all_sprites = pygame.sprite.Group()
+        self.tear_sprites = pygame.sprite.Group()
+        self.door_sprites = pygame.sprite.Group()
+        self.item_sprites = pygame.sprite.Group()
+        self.bomb_sprites = pygame.sprite.Group()
+        self.enemy_sprites = pygame.sprite.Group()
+        self.map_icons_sprites = pygame.sprite.Group()
+
+        # спрайт заднего фона
+        self.background = pygame.sprite.Sprite()
+        self.background.image = pygame.image.load('room.png')
+        self.background.image = pygame.transform.scale(self.background.image, (1200, 700))
+        self.background.rect = self.background.image.get_rect(topleft=(0, 0))
+        self.all_sprites.add(self.background)
+
+        # спрайт сменяющевого фона
+        self.changing_background = pygame.sprite.Sprite()
+        self.changing_background.image = pygame.image.load('room.png')
+        self.changing_background.image = pygame.transform.scale(self.changing_background.image, (1200, 700))
+        direction_of_changing = (1, 1)
+        self.changing_background.rect = self.changing_background.image.get_rect(topleft=(-1200, 0))
+        self.all_sprites.add(self.changing_background)
+
 
 game = Game()
 
@@ -130,7 +158,7 @@ class Item(pygame.sprite.Sprite):
         elif self.name == 'damage_potion':
             player_getting.health -= 1
         elif self.name == 'size_potion':
-            player_getting.tear_size = tuple(int(player_getting.tear_size[0] + 10, player_getting.tear_size[1] + 10))
+            player_getting.tear_size = (int(player_getting.tear_size[0] + 10), int(player_getting.tear_size[1] + 10))
         else:
             pass
         self.lying = False
@@ -228,13 +256,15 @@ class Room:  # class of rooms
                     if self.items_getted is False:
                         game.item_sprites.add(
                             choice([Item('speed_potion', (randint(100, 1100), randint(100, 600)),
-                                         player, room=(self.x_of_room, self.y_of_room)),
+                                         player, room=(self.y_of_room, self.x_of_room)),
                                     Item('size_potion', (randint(100, 1100), randint(100, 600)),
-                                         player, room=(self.x_of_room, self.y_of_room)),
+                                         player, room=(self.y_of_room, self.x_of_room)),
                                     Item('strength_potion', (randint(100, 1100), randint(100, 600)),
-                                         player, room=(self.x_of_room, self.y_of_room)),
+                                         player, room=(self.y_of_room, self.x_of_room)),
                                     Item('damage_potion', (randint(100, 1100), randint(100, 600)),
-                                         player, room=(self.x_of_room, self.y_of_room))]))
+                                         player, room=(self.y_of_room, self.x_of_room)),
+                                    Item('Red_Heart', (randint(100, 1100), randint(100, 600)),
+                                         player, room=(self.y_of_room, self.x_of_room))]))
                     self.items_getted = True
             if not bool(self.room_enemies):
                 self.cleared = True
@@ -339,8 +369,12 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, x, y, type, speed, bombs, kd, health, damage):
         super().__init__()
         # прописываем параметры игрока
-        self.image = pygame.image.load('isaac_front.png')
-        self.image = pygame.transform.scale(self.image, (100, 100))
+        if type == 'azazel':
+            self.image = pygame.image.load('azazel.png')
+            self.image = pygame.transform.scale(self.image, (100, 100))
+        else:
+            self.image = pygame.image.load('isaac_front.png')
+            self.image = pygame.transform.scale(self.image, (100, 100))
         self.rect = self.image.get_rect(topleft=(x, y))
         self.speed = speed
         self.change_room = False
@@ -385,11 +419,11 @@ class Enemy(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(self.image, (112, 132))
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
-        self.speed = 3
+        self.speed = 2 + game.base_level_of_enemies
         self.mask = pygame.mask.from_surface(self.image)
-        self.health = 3
+        self.health = 3 + game.base_level_of_enemies
         self.damaging_kd_short_range = 300
-        self.shooting_kd = 600
+        self.shooting_kd = 660 - 60 * game.base_level_of_enemies
         self.dmg_shooting = 1
 
     def moving(self, player):
@@ -464,7 +498,7 @@ class Tear(pygame.sprite.Sprite):
             self.image = pygame.transform.scale(self.image, size)
         else:
             self.rect.center = coords
-        self.speed = 6
+        self.speed = 10
         self.is_enemy = is_enemy
         self.mask = pygame.mask.from_surface(self.image)
         # напрвление стрельбы
@@ -510,9 +544,9 @@ class Horf(Enemy):
         self.rect = self.image.get_rect(topleft=(x, y))
         self.speed = 0
         self.mask = pygame.mask.from_surface(self.image)
-        self.health = 4
+        self.health = 3 + game.base_level_of_enemies
         self.damaging_kd_short_range = 300
-        self.shooting_kd = 600
+        self.shooting_kd = 660 - 60 * game.base_level_of_enemies
         self.dmg_shooting = 2
 
 
@@ -560,10 +594,6 @@ if __name__ == '__main__':
 
     font = pygame.font.Font(None, 30)
 
-    data_text = ['Начать игру:', f'Персонаж:{game.base_type_of_player}', f'Win streak:{game.first_win_streak}',
-                 f'Скорость:{game.base_speed}', f'Красные Сердца:{game.base_hearts}',
-                 f'Урон:{game.base_tear_damage}', f'Бомбы:{game.base_bombs}', f'Монеты:{game.base_coins}']
-
     intro_text = ['Нажмите ENTER чтобы начать игру,', 'чтобы выйти в меню - ESCAPE', '', 'Управление персонажем WASD',
                   'Атака через кнопки вверх вниз вправо влево', '',
                   'Начните новую игру или выберите сохранённую версию',
@@ -610,13 +640,13 @@ if __name__ == '__main__':
                     # чит-клавиша
                     if event.key == pygame.K_p:  # чит-клавиша(бета-тест)
                         game.item_sprites.add(Item('bomb', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
-                        game.item_sprites.add(
-                            Item('Penny', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
-                        game.item_sprites.add(
-                            Item('Red_Heart', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
-                        floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].room_enemies.append(Enemy(randint(100, 900),
-                                                                                                    randint(200, 500)))
-                        game.enemy_sprites.add(floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].room_enemies[-1])
+                        # game.item_sprites.add(
+                        #     Item('Penny', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
+                        game.item_sprites.add(Item('size_potion', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
+                        game.item_sprites.add(Item('Red_Heart', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
+                        # floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].room_enemies.append(Enemy(randint(100, 900),
+                        #                                                                             randint(200, 500)))
+                        # game.enemy_sprites.add(floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].room_enemies[-1])
 
                     # вызов мини-карты
                     if event.key == pygame.K_TAB:
@@ -630,7 +660,8 @@ if __name__ == '__main__':
                         start_restart = False
                         if game.id == -1:
                             cur.execute(
-                                '''INSERT INTO saves(streak_of_win,hearts,speed,bombs,money,tear_damage,type_of_player,firing_rate,level_of_hardness,type_of_game) VALUES(?,?,?,?,?,?,?,?,?,?)''',
+                                '''INSERT INTO saves(streak_of_win,hearts,speed,bombs,money,tear_damage,type_of_player,
+                                firing_rate,level_of_hardness,type_of_game) VALUES(?,?,?,?,?,?,?,?,?,?)''',
                                 (game.first_win_streak, player.max_health / 2, player.speed, player.inventory_bombs,
                                  player.inventory_money, player.shoot_dmg, player.type, game.base_firing_rate, game.base_level_of_enemies,
                                  'загруженная'))
@@ -745,7 +776,6 @@ if __name__ == '__main__':
             clock.tick(60)
         elif first_entry:
             screen.blit(first_page, (0, 0))
-
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN:
@@ -764,7 +794,7 @@ if __name__ == '__main__':
                                             list_of_orders[sd][1], list_of_orders[sd][6], list_of_orders[sd][2],
                                             list_of_orders[sd][10], list_of_orders[sd][0])
 
-            data_text = [f'Начать игру: {game.type_of_game}', f'Персонаж:{game.base_type_of_player}',
+            data_text = [f'Начать игру: {game.type_of_game} #ID:{game.id}', f'Персонаж:{game.base_type_of_player}',
                          f'Win streak:{game.first_win_streak}',
                          f'Скорость:{game.base_speed}', f'Красные Сердца:{game.base_hearts}',
                          f'Урон:{game.base_tear_damage}', f'Бомбы:{game.base_bombs}', f'Монеты:{game.base_coins}']
@@ -792,6 +822,7 @@ if __name__ == '__main__':
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN:
+                        game.update_game()
                         floor = Floor()
                         sd = 0
                         player = Player(550, 300, game.base_type_of_player, game.base_speed, game.base_bombs,
@@ -812,7 +843,7 @@ if __name__ == '__main__':
                             sd -= 1
 
                     if event.key == pygame.K_DELETE:
-                        if game.id == -1:
+                        if game.id != -1:
                             cur.execute('''DELETE FROM saves WHERE id = ?''', (game.id,))
                             con.commit()
                             sd = 0
