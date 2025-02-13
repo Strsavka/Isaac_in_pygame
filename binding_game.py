@@ -299,8 +299,6 @@ class Room:  # class of rooms
                                         Item('damage_potion', (randint(100, 1100), randint(100, 600)),
                                              player, room=(self.x_of_room, self.y_of_room))]))
                     self.once = False
-
-
 class Trader(pygame.sprite.Sprite):
     def __init__(self, pos, room=(0, 0)):
         super().__init__()
@@ -311,14 +309,11 @@ class Trader(pygame.sprite.Sprite):
         self.pos = pos
         self.mask = pygame.mask.from_surface(self.image)
         self.room = room
-
     def update(self):
         if self.room != floor.isaac_in:
             self.rect.center = (-1000000, -10000000)
         elif self.room == floor.isaac_in:
             self.rect.center = self.pos
-
-
 class ItemTrade(Item):
     def add_to_inventory(self, player_getting):
         if self.name == 'bomb':
@@ -654,11 +649,8 @@ class Boss(Enemy):
         self.damaging_kd_short_range = 300
         self.shooting_kd = 1800
         self.dmg_shooting = 0
-
     def shooting(self, player):
         pass
-
-
 if __name__ == '__main__':
     pygame.init()
     pygame.display.set_caption('The Binding of Isaac')
