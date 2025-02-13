@@ -18,6 +18,12 @@ im_not_seen_room = pygame.transform.scale(im_not_seen_room, (40, 32))
 im_now_room = pygame.image.load('now_room_icon.png')
 im_now_room = pygame.transform.scale(im_now_room, (40, 32))
 
+floor_exit = pygame.sprite.Sprite()
+floor_exit.image = pygame.image.load('open_up_door.png')
+floor_exit.image = pygame.transform.scale(floor_exit.image, (100, 100))
+floor_exit.rect = floor_exit.image.get_rect(center=(600, 350))
+floor_exit.mask = pygame.mask.from_surface(floor_exit.image)
+
 # Размеры одного сегмента сердца
 HEART_WIDTH = 50
 HEART_HEIGHT = 50
@@ -56,11 +62,14 @@ class Game:
         self.bomb_sprites = pygame.sprite.Group()
         self.enemy_sprites = pygame.sprite.Group()
         self.map_icons_sprites = pygame.sprite.Group()
+        self.exit_sprite = pygame.sprite.Group()
+
+        self.exit_sprite.add(floor_exit)
 
         # стандартные значения в датабазу
         (self.base_hearts, self.base_level_of_enemies, self.base_speed, self.base_bombs, self.base_coins,
          self.base_firing_rate, self.base_type_of_player, self.base_tear_damage, self.first_win_streak,
-         self.type_of_game, self.id) = (3, 1, 6, 1, 5, 360, 'isaac', 1, 0, 'новая', 0)
+         self.type_of_game, self.id, self.tear_size) = (3, 1, 6, 1, 5, 360, 'isaac', 1, 0, 'новая', 0, 50)
 
         # спрайт заднего фона
         self.background = pygame.sprite.Sprite()
@@ -69,13 +78,20 @@ class Game:
         self.background.rect = self.background.image.get_rect(topleft=(0, 0))
         self.all_sprites.add(self.background)
 
+        self.list_of_room = ['enemy', 'enemy', 'enemy', 'enemy', 'enemy', 'enemy', 'enemy', 'enemy', 'enemy', 'enemy',
+                             'enemy', 'enemy', 'enemy', 'enemy', 'default', 'default', 'default', 'default', 'default',
+                             'default', 'default', 'default', 'boss', 'default']
+
         # спрайт сменяющевого фона
         self.changing_background = pygame.sprite.Sprite()
         self.changing_background.image = pygame.image.load('room.png')
         self.changing_background.image = pygame.transform.scale(self.changing_background.image, (1200, 700))
-        direction_of_changing = (1, 1)
         self.changing_background.rect = self.changing_background.image.get_rect(topleft=(-1200, 0))
         self.all_sprites.add(self.changing_background)
+
+        self.game_ended = False
+
+
 
     def update_game(self):
         # общие свойства
@@ -104,6 +120,10 @@ class Game:
         direction_of_changing = (1, 1)
         self.changing_background.rect = self.changing_background.image.get_rect(topleft=(-1200, 0))
         self.all_sprites.add(self.changing_background)
+
+        self.list_of_room = ['enemy', 'enemy', 'enemy', 'enemy', 'enemy', 'enemy', 'enemy', 'enemy', 'enemy', 'enemy',
+                             'enemy', 'enemy', 'enemy', 'enemy', 'default', 'default', 'default', 'default', 'default',
+                             'default', 'default', 'default', 'boss', 'default']
 
 
 game = Game()
@@ -158,7 +178,7 @@ class Item(pygame.sprite.Sprite):
         elif self.name == 'damage_potion':
             player_getting.health -= 1
         elif self.name == 'size_potion':
-            player_getting.tear_size = (int(player_getting.tear_size[0] + 10), int(player_getting.tear_size[1] + 10))
+            player_getting.tear_size = (int(player_getting.tear_size[0] + 1), int(player_getting.tear_size[1] + 1))
         else:
             pass
         self.lying = False
@@ -212,8 +232,8 @@ class Room:  # class of rooms
         self.items_getted = False
         self.type = type
         self.once = True
-        self.y_of_room, self.x_of_room = coords
         self.coords = coords
+        self.y_of_room, self.x_of_room = coords
         self.up_door, self.bottom_door, self.right_door, self.left_door = False, False, False, False
         if self.type == 'enemy' or self.type == 'boss':
             self.open_up_door, self.open_bottom_door, self.open_right_door, self.open_left_door = False, False, False, False
@@ -234,16 +254,8 @@ class Room:  # class of rooms
             for i in range(randint(1, 5)):
                 self.room_enemies.append(
                     choice([Enemy(randint(100, 1100), randint(100, 600)), Horf(randint(100, 1100), randint(100, 600))]))
-        elif self.type == 'boss':
+        if self.type == 'boss':
             self.room_enemies.append(Boss(600, 350))
-        # elif self.type == 'trade':
-        #     game.all_sprites.add(Trader((600, 350), room=(self.x_of_room, self.y_of_room)))
-        #     game.item_sprites.add(ItemTrade('bomb', (300, 500), player_getting=player, room=(self.x_of_room, self.y_of_room)))
-        #     game.item_sprites.add(ItemTrade('Red_Heart', (500, 500), player_getting=player, room=(self.x_of_room, self.y_of_room)))
-        #     game.item_sprites.add(
-        #         choice([ItemTrade('speed_potion', (700, 500), player_getting=player, room=(self.x_of_room, self.y_of_room)),
-        #                 ItemTrade('strength_potion', (700, 500), player_getting=player, room=(self.x_of_room, self.y_of_room)),
-        #                 ItemTrade('size_potion', (700, 500), player_getting=player, room=(self.x_of_room, self.y_of_room))]))
 
     def room_update(self):
         # Самостоятельный апдейт комнаты, обновляется только текущая комната
@@ -277,28 +289,30 @@ class Room:  # class of rooms
                 if self.once:
                     for i in range(2):
                         game.item_sprites.add(Item('Red_Heart', (randint(100, 1100), randint(100, 600)), player,
-                                                   room=(self.x_of_room - 1, self.y_of_room - 1)))
+                                                   room=(self.y_of_room, self.x_of_room)))
                         game.item_sprites.add(
                             choice([Item('speed_potion', (randint(100, 1100), randint(100, 600)),
-                                         player, room=(self.x_of_room - 1, self.y_of_room - 1)),
+                                         player, room=(self.y_of_room, self.x_of_room)),
                                     Item('size_potion', (randint(100, 1100), randint(100, 600)),
-                                         player, room=(self.x_of_room - 1, self.y_of_room - 1)),
+                                         player, room=(self.y_of_room, self.x_of_room)),
                                     Item('strength_potion', (randint(100, 1100), randint(100, 600)),
-                                         player, room=(self.x_of_room - 1, self.y_of_room - 1)),
+                                         player, room=(self.y_of_room, self.x_of_room)),
                                     Item('damage_potion', (randint(100, 1100), randint(100, 600)),
-                                         player, room=(self.x_of_room - 1, self.y_of_room - 1))]))
+                                         player, room=(self.y_of_room, self.x_of_room))]))
                     if self.type == 'boss':
                         for i in range(5):
                             game.item_sprites.add(
                                 choice([Item('speed_potion', (randint(100, 1100), randint(100, 600)),
-                                             player, room=(self.x_of_room, self.y_of_room)),
+                                             player, room=(self.y_of_room, self.x_of_room)),
                                         Item('size_potion', (randint(100, 1100), randint(100, 600)),
-                                             player, room=(self.x_of_room, self.y_of_room)),
+                                             player, room=(self.y_of_room, self.x_of_room)),
                                         Item('strength_potion', (randint(100, 1100), randint(100, 600)),
-                                             player, room=(self.x_of_room, self.y_of_room)),
+                                             player, room=(self.y_of_room, self.x_of_room)),
                                         Item('damage_potion', (randint(100, 1100), randint(100, 600)),
-                                             player, room=(self.x_of_room, self.y_of_room))]))
+                                             player, room=(self.y_of_room, self.x_of_room))]))
                     self.once = False
+
+
 class Trader(pygame.sprite.Sprite):
     def __init__(self, pos, room=(0, 0)):
         super().__init__()
@@ -309,11 +323,14 @@ class Trader(pygame.sprite.Sprite):
         self.pos = pos
         self.mask = pygame.mask.from_surface(self.image)
         self.room = room
+
     def update(self):
         if self.room != floor.isaac_in:
             self.rect.center = (-1000000, -10000000)
         elif self.room == floor.isaac_in:
             self.rect.center = self.pos
+
+
 class ItemTrade(Item):
     def add_to_inventory(self, player_getting):
         if self.name == 'bomb':
@@ -368,12 +385,13 @@ class Floor:  # класс обработка всех комнат вместе
             self.floor.append([])
             for j in range(5):
                 if i == 2 and j == 2:
-                    self.floor[i].append(Room('boss', (i, j)))
+                    self.floor[i].append(Room('default', (i, j)))
                 else:
-                    self.floor[i].append(
-                        Room(choice(
-                            ['default', 'enemy', 'enemy', 'enemy', 'trade', 'enemy', 'enemy', 'enemy', 'trade', 'enemy',
-                             'boss']), (i, j)))
+                    room = choice(game.list_of_room)
+                    if room == 'boss':
+                        self.boss_room = (i, j)
+                    del game.list_of_room[game.list_of_room.index(room)]
+                    self.floor[i].append(Room(room, (i, j)))
         self.icon_map = []
         for i in range(5):
             self.icon_map.append([])
@@ -453,7 +471,7 @@ class MapIcon(pygame.sprite.Sprite):
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, x, y, type, speed, bombs, kd, health, damage):
+    def __init__(self, x, y, type, speed, bombs, kd, health, damage, tear_size=(50, 50)):
         super().__init__()
         # прописываем параметры игрока
         if type == 'azazel':
@@ -474,7 +492,8 @@ class Player(pygame.sprite.Sprite):
         self.max_health = health * 2  # макс кол-во хп
         self.is_updating = True
         self.shoot_dmg = damage
-        self.tear_size = (50, 50)
+        self.tear_size = (tear_size, tear_size)
+        self.player_is_dead = False
 
     def update(self):
         # ограничение по комнате
@@ -494,6 +513,7 @@ class Player(pygame.sprite.Sprite):
         self.image = pygame.image.load('dead.png')
         self.image = pygame.transform.scale(self.image, (100, 100))
         self.is_updating = False
+        self.player_is_dead = True
 
     def getting_damage(self, dmg):
         self.health -= dmg
@@ -581,8 +601,8 @@ class Tear(pygame.sprite.Sprite):
             self.image = pygame.transform.scale(self.image, (40, 40))
         self.rect = self.image.get_rect()
         if not is_enemy:
-            self.rect.center = player.rect.center
             self.image = pygame.transform.scale(self.image, size)
+            self.rect.center = player.rect.center
         else:
             self.rect.center = coords
         self.speed = 10
@@ -649,8 +669,31 @@ class Boss(Enemy):
         self.damaging_kd_short_range = 300
         self.shooting_kd = 1800
         self.dmg_shooting = 0
+
     def shooting(self, player):
         pass
+
+
+def save_game():
+    cur.execute('''UPDATE saves SET streak_of_win = ? WHERE id = ?''',
+                (game.first_win_streak, game.id))
+    cur.execute('''UPDATE saves SET speed = ? WHERE id = ?''', (player.speed, game.id))
+    cur.execute('''UPDATE saves SET hearts = ? WHERE id = ?''',
+                (player.max_health / 2, game.id))
+    cur.execute('''UPDATE saves SET firing_rate = ? WHERE id = ?''',
+                (game.base_firing_rate, game.id))
+    cur.execute('''UPDATE saves SET tear_damage = ? WHERE id = ?''',
+                (player.shoot_dmg, game.id))
+    cur.execute('''UPDATE saves SET bombs = ? WHERE id = ?''',
+                (player.inventory_bombs, game.id))
+    cur.execute('''UPDATE saves SET money = ? WHERE id = ?''',
+                (player.inventory_money, game.id))
+    cur.execute('''UPDATE saves SET level_of_hardness = ? WHERE id = ?''',
+                (game.base_level_of_enemies, game.id))
+    cur.execute('''UPDATE saves SET tear_size = ? WHERE id = ?''',
+                (player.tear_size[0], game.id))
+
+
 if __name__ == '__main__':
     pygame.init()
     pygame.display.set_caption('The Binding of Isaac')
@@ -698,7 +741,8 @@ if __name__ == '__main__':
     intro_text = ['Нажмите ENTER чтобы начать игру,', 'чтобы выйти в меню - ESCAPE', '', 'Управление персонажем WASD',
                   'Атака через кнопки вверх вниз вправо влево', '',
                   'Начните новую игру или выберите сохранённую версию',
-                  'Для перемотки используйте стрелки вправо/влево', 'Чтобы удалить нажмите DELETE']
+                  'Для перемотки используйте стрелки вправо/влево', '', 'Чтобы удалить нажмите DELETE', '',
+                  'Чтобы изменить уровень сложности на загруженной игре', 'используйте вверх/вниз']
 
     # Игровой цикл
     while running:
@@ -740,12 +784,10 @@ if __name__ == '__main__':
 
                     # чит-клавиша
                     if event.key == pygame.K_p:  # чит-клавиша(бета-тест)
-                        game.item_sprites.add(
-                            Item('size_potion', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
-                        game.item_sprites.add(
-                            Item('Penny', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
-                        game.item_sprites.add(
-                            Item('Red_Heart', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
+                        game.item_sprites.add(Item('bomb', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
+                        game.item_sprites.add(Item('size_potion', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
+                        game.item_sprites.add(Item('Red_Heart', (randint(100, 900), randint(200, 500)), player, room=(2, 2)))
+
                     # вызов мини-карты
                     if event.key == pygame.K_TAB:
                         if game.map_show:
@@ -757,28 +799,22 @@ if __name__ == '__main__':
                     if event.key == pygame.K_ESCAPE:
                         start_restart = False
                         if game.id == -1:
-                            cur.execute(
-                                '''INSERT INTO saves(streak_of_win,hearts,speed,bombs,money,tear_damage,type_of_player,
-                                firing_rate,level_of_hardness,type_of_game) VALUES(?,?,?,?,?,?,?,?,?,?)''',
-                                (game.first_win_streak, player.max_health / 2, player.speed, player.inventory_bombs,
-                                 player.inventory_money, player.shoot_dmg, player.type, game.base_firing_rate, game.base_level_of_enemies,
-                                 'загруженная'))
+                            if player.player_is_dead:
+                                pass
+                            else:
+                                cur.execute(
+                                    '''INSERT INTO saves(streak_of_win,hearts,speed,bombs,money,tear_damage,type_of_player,
+                                    firing_rate,level_of_hardness,type_of_game,tear_size) VALUES(?,?,?,?,?,?,?,?,?,?,?)''',
+                                    (game.first_win_streak, player.max_health / 2, player.speed, player.inventory_bombs,
+                                     player.inventory_money, player.shoot_dmg, player.type, game.base_firing_rate, game.base_level_of_enemies,
+                                     'загруженная', player.tear_size[0]))
                         else:
-                            cur.execute('''UPDATE saves SET streak_of_win = ? WHERE id = ?''',
-                                        (game.first_win_streak, game.id))
-                            cur.execute('''UPDATE saves SET speed = ? WHERE id = ?''', (player.speed, game.id))
-                            cur.execute('''UPDATE saves SET hearts = ? WHERE id = ?''',
-                                        (player.max_health / 2, game.id))
-                            cur.execute('''UPDATE saves SET firing_rate = ? WHERE id = ?''',
-                                        (game.base_firing_rate, game.id))
-                            cur.execute('''UPDATE saves SET tear_damage = ? WHERE id = ?''',
-                                        (player.shoot_dmg, game.id))
-                            cur.execute('''UPDATE saves SET bombs = ? WHERE id = ?''',
-                                        (player.inventory_bombs, game.id))
-                            cur.execute('''UPDATE saves SET money = ? WHERE id = ?''',
-                                        (player.inventory_money, game.id))
-                            cur.execute('''UPDATE saves SET level_of_hardness = ? WHERE id = ?''',
-                                        (game.base_level_of_enemies, game.id))
+                            if player.player_is_dead:
+                                cur.execute('''DELETE FROM saves WHERE id = ?''', (game.id,))
+                                con.commit()
+                                sd = 0
+                            else:
+                                save_game()
                         con.commit()
                         player.kill()
 
@@ -822,6 +858,14 @@ if __name__ == '__main__':
                     direction_of_changing = (0, -1)
                     game.changing_background.rect = game.changing_background.image.get_rect(topleft=(0, 700))
 
+                if (pygame.sprite.collide_mask(player, floor_exit) and floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].cleared
+                        and floor.isaac_in == floor.boss_room):
+                    game.game_ended = True
+                    start_restart = False
+                    game.first_win_streak += 1
+                    save_game()
+                    con.commit()
+
             # переход в другую комнату
             if player.change_room:
                 game.door_sprites.remove(floor.up_door, floor.left_door, floor.bottom_door, floor.right_door)
@@ -858,6 +902,8 @@ if __name__ == '__main__':
             screen.blit(money_counter, (50, 100))
             game.enemy_sprites.draw(screen)
             game.door_sprites.draw(screen)
+            if floor.floor[floor.isaac_in[0]][floor.isaac_in[1]].cleared and floor.isaac_in == floor.boss_room:
+                game.exit_sprite.draw(screen)
             game.tear_sprites.draw(screen)
             game.bomb_sprites.draw(screen)
             game.item_sprites.draw(screen)
@@ -880,22 +926,50 @@ if __name__ == '__main__':
                         first_entry = False
                 if event.type == pygame.QUIT:
                     running = False
+
+        elif game.game_ended:
+            screen.blit(menu, (0, 0))
+            res_text = [f'Поздравляем, вы закончили этаж №{game.first_win_streak}', f'Персонаж:{game.base_type_of_player}',
+                         f'Win streak:{game.first_win_streak}',
+                         f'Скорость:{game.base_speed}', f'Красные Сердца:{game.base_hearts}',
+                         f'Урон:{game.base_tear_damage}', f'Бомбы:{game.base_bombs}', f'Монеты:{game.base_coins}', '',
+                        'Нажмите Enter игра сохранится сама']
+
+            text_coord = 10
+            for line in res_text:
+                string_rendered = font.render(line, 1, pygame.Color('black'))
+                res_rect = string_rendered.get_rect()
+                text_coord += 10
+                res_rect.top = text_coord
+                res_rect.x = 10
+                text_coord += res_rect.height
+                screen.blit(string_rendered, res_rect)
+
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_RETURN:
+                        game.game_ended = False
+                        sd = 0
+                if event.type == pygame.QUIT:
+                    running = False
+
         else:
             screen.blit(menu, (0, 0))
             text_coord = 10
             data = cur.execute('''SELECT * FROM saves''').fetchall()
-            list_of_orders = [*(data) + [[-1, 'isaac', 0, 6, 360, 4, 1, 1, 2, 5, 'новая']]]
+            list_of_orders = [*(data) + [[-1, 'isaac', 0, 6, 360, 4, 1, 1, 2, 5, 'новая', 50]]]
             (game.base_hearts, game.base_level_of_enemies, game.base_speed, game.base_bombs, game.base_coins,
              game.base_firing_rate, game.base_type_of_player, game.base_tear_damage, game.first_win_streak,
-             game.type_of_game, game.id) = (list_of_orders[sd][5], list_of_orders[sd][7], list_of_orders[sd][3],
+             game.type_of_game, game.id, game.tear_size) = (list_of_orders[sd][5], list_of_orders[sd][7], list_of_orders[sd][3],
                                             list_of_orders[sd][8], list_of_orders[sd][9], list_of_orders[sd][4],
                                             list_of_orders[sd][1], list_of_orders[sd][6], list_of_orders[sd][2],
-                                            list_of_orders[sd][10], list_of_orders[sd][0])
+                                            list_of_orders[sd][10], list_of_orders[sd][0], list_of_orders[sd][11])
 
             data_text = [f'Начать игру: {game.type_of_game} #ID:{game.id}', f'Персонаж:{game.base_type_of_player}',
                          f'Win streak:{game.first_win_streak}',
                          f'Скорость:{game.base_speed}', f'Красные Сердца:{game.base_hearts}',
-                         f'Урон:{game.base_tear_damage}', f'Бомбы:{game.base_bombs}', f'Монеты:{game.base_coins}']
+                         f'Урон:{game.base_tear_damage}', f'Бомбы:{game.base_bombs}', f'Монеты:{game.base_coins}', '',
+                         f'Уровень сложности:{game.base_level_of_enemies}']
 
             for line in intro_text:
                 string_rendered = font.render(line, 1, pygame.Color('black'))
@@ -923,8 +997,8 @@ if __name__ == '__main__':
                         game.update_game()
                         floor = Floor()
                         sd = 0
-                        player = Player(550, 300, game.base_type_of_player, game.base_speed, game.base_bombs,
-                                        game.base_firing_rate, game.base_hearts, game.base_tear_damage)
+                        player = Player(200, 200, game.base_type_of_player, game.base_speed, game.base_bombs,
+                                        game.base_firing_rate, game.base_hearts, game.base_tear_damage, tear_size=game.tear_size)
                         game.all_sprites.add(player)
                         start_restart = True
 
@@ -939,6 +1013,20 @@ if __name__ == '__main__':
                             sd = len(list_of_orders) - 1
                         else:
                             sd -= 1
+
+                    if event.key == pygame.K_UP:
+                        if game.base_level_of_enemies < 5:
+                            game.base_level_of_enemies += 1
+                            cur.execute('''UPDATE saves SET level_of_hardness = ? WHERE id = ?''',
+                                        (game.base_level_of_enemies, game.id))
+                            con.commit()
+
+                    if event.key == pygame.K_DOWN:
+                        if game.base_level_of_enemies > 1:
+                            game.base_level_of_enemies -= 1
+                            cur.execute('''UPDATE saves SET level_of_hardness = ? WHERE id = ?''',
+                                        (game.base_level_of_enemies, game.id))
+                            con.commit()
 
                     if event.key == pygame.K_DELETE:
                         if game.id != -1:
